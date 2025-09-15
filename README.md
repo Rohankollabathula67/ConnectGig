@@ -115,36 +115,6 @@ The platform uses PostgreSQL with PostGIS for geospatial queries:
 - **Payments**: Transaction management
 - **Chats**: Real-time messaging
 
-## 🔒 Security & Compliance
-
-- End-to-end encryption for chat
-- AES-256 for sensitive data
-- GDPR/Indian Data Privacy compliance
-- Role-based access control
-
-## 📅 Development Roadmap
-
-### MVP (3-4 months)
-- Authentication & profiles
-- Job posting & acceptance
-- Basic payments & reviews
-- Admin dashboard
-
-### Phase 2 (4-6 months)
-- AI matching engine
-- Real-time tracking
-- Chat & notifications
-
-### Phase 3 (6-12 months)
-- AI pricing assistant
-- Content moderation
-- Worker loyalty program
-
-### Phase 4 (12+ months)
-- Advanced analytics
-- Multilingual support
-- City expansion
-
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -157,6 +127,14 @@ The platform uses PostgreSQL with PostGIS for geospatial queries:
 
 This project is proprietary software. All rights reserved.
 
-## 📞 Support
+## How I built this 
 
-For support and questions, please contact the development team.
+this application 95% was built by AI I have altered for myrequiremts and Integration for Auth this application was not copied from anywhere 
+
+## status
+
+This application still have lot of developments pending 
+
+## My submission to OpenAI X Nxtwave Academy
+
+I'am submitting this project for OpenAI X NxtWave
