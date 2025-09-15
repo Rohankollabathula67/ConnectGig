@@ -1,0 +1,29 @@
+{
+  "name": "@connectgig/database",
+  "version": "1.0.0",
+  "description": "Database schema and utilities for ConnectGig platform",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx src/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.15.0",
+    "@types/node": "^20.10.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.15.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.3.3"
+  },
+  "peerDependencies": {
+    "@connectgig/types": "workspace:*"
+  }
+}

@@ -1,0 +1,323 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  phone       String   @unique
+  passwordHash String?
+  role        UserRole @default(CLIENT)
+  kycVerified Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  worker     Worker?
+  clientJobs Job[]     @relation("ClientJobs")
+  workerJobs Job[]     @relation("WorkerJobs")
+  reviews    Review[]
+  clientPayments Payment[] @relation("ClientPayments")
+  workerPayments Payment[] @relation("WorkerPayments")
+  sentChats    Chat[]  @relation("SentChats")
+  receivedChats Chat[] @relation("ReceivedChats")
+  notifications Notification[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  CLIENT
+  WORKER
+  ADMIN
+}
+
+// Worker Profile
+model Worker {
+  id             String            @id @default(cuid())
+  userId         String            @unique
+  ratingAvg      Float             @default(0)
+  jobsCompleted  Int               @default(0)
+  goodiesSent    Boolean           @default(false)
+  hourlyRate     Float
+  bio            String?
+  profileImage   String?
+  availability   AvailabilityStatus @default(OFFLINE)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  // Relations
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills        WorkerSkill[]
+  location      WorkerLocation?
+  documents     Document[]
+
+  @@map("workers")
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+// Worker Skills
+model WorkerSkill {
+  id         String       @id @default(cuid())
+  workerId   String
+  skillId    String
+  level      SkillLevel   @default(BEGINNER)
+  verified   Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  // Relations
+  worker    Worker       @relation(fields: [workerId], references: [id], onDelete: Cascade)
+  skill     Skill        @relation(fields: [skillId], references: [id])
+
+  @@unique([workerId, skillId])
+  @@map("worker_skills")
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  EXPERT
+}
+
+// Skills Catalog
+model Skill {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  category SkillCategory
+  createdAt DateTime      @default(now())
+
+  // Relations
+  workerSkills WorkerSkill[]
+
+  @@map("skills")
+}
+
+enum SkillCategory {
+  PLUMBING
+  ELECTRICAL
+  CARPENTRY
+  CLEANING
+  TUTORING
+  DELIVERY
+  OTHER
+}
+
+// Worker Location (PostGIS)
+model WorkerLocation {
+  id        String @id @default(cuid())
+  workerId  String @unique
+  latitude  Float
+  longitude Float
+  address   String
+  city      String
+  state     String
+  country   String
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  worker   Worker @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("worker_locations")
+}
+
+// Documents
+model Document {
+  id         String       @id @default(cuid())
+  workerId   String
+  type       DocumentType
+  url        String
+  verified   Boolean      @default(false)
+  uploadedAt DateTime     @default(now())
+
+  // Relations
+  worker    Worker       @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+enum DocumentType {
+  ID_PROOF
+  ADDRESS_PROOF
+  SKILL_CERTIFICATE
+  BACKGROUND_CHECK
+}
+
+// Jobs
+model Job {
+  id            String      @id @default(cuid())
+  clientId      String
+  workerId      String?
+  title         String
+  description   String
+  category      SkillCategory
+  price         Float
+  status        JobStatus   @default(PENDING)
+  urgency       UrgencyLevel @default(MEDIUM)
+  scheduledDate DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  client       User        @relation("ClientJobs", fields: [clientId], references: [id], onDelete: Cascade)
+  worker       User?       @relation("WorkerJobs", fields: [workerId], references: [id])
+  location     JobLocation?
+  reviews      Review[]
+  payments     Payment[]
+  chats        Chat[]
+
+  @@map("jobs")
+}
+
+enum JobStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum UrgencyLevel {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Job Location
+model JobLocation {
+  id        String @id @default(cuid())
+  jobId     String @unique
+  latitude  Float
+  longitude Float
+  address   String
+  city      String
+  state     String
+  country   String
+
+  // Relations
+  job      Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("job_locations")
+}
+
+// Reviews
+model Review {
+  id           String   @id @default(cuid())
+  jobId        String
+  reviewerId   String
+  rating       Int      @db.SmallInt
+  text         String
+  moderated    Boolean  @default(false)
+  abuseFlagged Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  // Relations
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reviewer   User     @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, reviewerId])
+  @@map("reviews")
+}
+
+// Payments
+model Payment {
+  id        String        @id @default(cuid())
+  jobId     String
+  clientId  String
+  workerId  String
+  amount    Float
+  status    PaymentStatus @default(PENDING)
+  method    PaymentMethod
+  escrowId  String        @unique
+  createdAt DateTime      @default(now())
+  completedAt DateTime?
+
+  // Relations
+  job      Job           @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  client   User          @relation("ClientPayments", fields: [clientId], references: [id], onDelete: Cascade)
+  worker   User          @relation("WorkerPayments", fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+enum PaymentStatus {
+  PENDING
+  HELD_IN_ESCROW
+  RELEASED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  UPI
+  CARD
+  WALLET
+  BANK_TRANSFER
+}
+
+// Chat Messages
+model Chat {
+  id           String      @id @default(cuid())
+  jobId        String
+  senderId     String
+  receiverId   String
+  message      String
+  messageType  MessageType @default(TEXT)
+  read         Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+
+  // Relations
+  job         Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  sender      User        @relation("SentChats", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver    User        @relation("ReceivedChats", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@map("chats")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  LOCATION
+  SYSTEM
+}
+
+// Notifications
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  JOB_OFFER
+  JOB_ACCEPTED
+  JOB_COMPLETED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
+  SYSTEM_UPDATE
+}
