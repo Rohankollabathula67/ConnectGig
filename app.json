@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Daily Promises",
-    "slug": "Connect_Gig",
+    "name": "Connect Gig",
+    "slug": "connect-gig",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "dailypromises",
+    "scheme": "connectgig",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.rohankollabathula.connectgig",
       "adaptiveIcon": {
-        "backgroundColor": "#6B21A8",
+        "backgroundColor": "#6C5CE7",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
@@ -32,18 +32,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#6B21A8",
-          "dark": {
-            "backgroundColor": "#0A0A0F"
-          }
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#0A0A0F",
-          "sounds": []
+          "backgroundColor": "#08080F"
         }
       ]
     ],
