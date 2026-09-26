@@ -14,6 +14,7 @@ import { ChipGroup } from '../../components/ui/ChipGroup';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Avatar } from '../../components/ui/Avatar';
+import { formatCurrency } from '../../utils/currency';
 
 const TABS = [
   { id: 'active', label: 'Active' },
@@ -22,9 +23,9 @@ const TABS = [
 ];
 
 const MOCK_BOOKINGS = [
-  { id: '1', service: 'Kitchen Sink Repair', worker: 'David Chen', status: 'active', date: 'Today, 2:00 PM', amount: '$45', category: 'Plumber' },
-  { id: '2', service: 'Home Deep Cleaning', worker: 'Sarah Jenkins', status: 'completed', date: 'Oct 24, 2025', amount: '$45', category: 'Cleaner' },
-  { id: '3', service: 'AC Installation', worker: 'Marcus Rivera', status: 'completed', date: 'Oct 22, 2025', amount: '$85', category: 'Electrician' },
+  { id: '1', service: 'Kitchen Sink Repair', worker: 'David Chen', status: 'active', date: 'Today, 2:00 PM', amount: 380, category: 'Plumber' },
+  { id: '2', service: 'Home Deep Cleaning', worker: 'Sarah Jenkins', status: 'completed', date: 'Oct 24, 2025', amount: 220, category: 'Cleaner' },
+  { id: '3', service: 'AC Installation', worker: 'Marcus Rivera', status: 'completed', date: 'Oct 22, 2025', amount: 850, category: 'Electrician' },
 ];
 
 export default function BookingsScreen() {
@@ -64,7 +65,7 @@ export default function BookingsScreen() {
                   <Text style={styles.bookingDate}>{booking.date}</Text>
                 </View>
                 <View style={styles.bookingRight}>
-                  <Text style={styles.bookingAmount}>{booking.amount}</Text>
+                  <Text style={styles.bookingAmount}>{formatCurrency(booking.amount)}</Text>
                   <Badge
                     type={booking.status === 'active' ? 'online' : booking.status === 'completed' ? 'paid' : 'urgent'}
                     label={booking.status === 'active' ? 'Active' : booking.status === 'completed' ? 'Done' : 'Cancelled'}

@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rohankollabathula.connectgig"
     },
     "android": {
       "package": "com.rohankollabathula.connectgig",
@@ -34,7 +35,9 @@
           "resizeMode": "contain",
           "backgroundColor": "#08080F"
         }
-      ]
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
     ],
     "experiments": {
       "typedRoutes": true,

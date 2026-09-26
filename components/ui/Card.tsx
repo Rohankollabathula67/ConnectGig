@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleSheet, View, ViewStyle, StyleProp } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Radii, Shadows, Spacing } from '../../constants/spacing';
 
@@ -13,7 +13,7 @@ type CardVariant = 'default' | 'elevated' | 'outlined';
 interface CardProps {
   children: React.ReactNode;
   variant?: CardVariant;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padding?: keyof typeof Spacing | number;
 }
 

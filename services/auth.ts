@@ -1,97 +1,161 @@
 /**
- * ConnectGig — Authentication Service (§3.3)
- * Provides Phone OTP authentication workflows for Firebase & Simulated Mock mode.
+ * ConnectGig — Authentication Service
+ *
+ * Real phone OTP via Firebase Web SDK (firebase/auth).
+ * Session persistence via Firebase's built-in auth state.
+ *
+ * ⚠️  MOCK MODE IS PERMANENTLY REMOVED.
+ * The "any phone + 123456" bypass no longer exists.
+ * For development testing without burning real SMS credits:
+ *   Firebase Console → Authentication → Sign-in method → Phone
+ *   → Phone numbers for testing → add your number + a fixed code.
  */
 
-import { auth, db, IS_FIREBASE_ENABLED } from './firebase';
-import { 
-  signInWithPhoneNumber, 
-  signOut as firebaseSignOut,
-  User as FirebaseUser 
+import {
+  signInWithPhoneNumber,
+  ConfirmationResult,
+  onAuthStateChanged,
+  User,
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { firebaseAuth, db } from './firebase';
 import type { UserRole } from '../types/user';
 
-// Mock users database in memory for Simulated Mode
-let mockUsers: Record<string, { uid: string; phone: string; role: UserRole; name: string }> = {
-  '+15551234567': { uid: 'mock-client-uid', phone: '+15551234567', role: 'client', name: 'Alex Johnson' },
-  '+15559876543': { uid: 'mock-worker-uid', phone: '+15559876543', role: 'provider', name: 'Alex Rivers' },
-};
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface AuthSession {
   uid: string;
   phoneNumber: string;
   role: UserRole;
   displayName: string;
+  isNewUser?: boolean;
+  profilePhotoUrl?: string;
 }
 
+export interface UserDocument {
+  uid: string;
+  phone: string;
+  role: UserRole;
+  name: string;
+  createdAt: any;
+  address?: string;
+  idProof?: string;
+  profilePhotoUrl?: string;
+}
+
+export type { ConfirmationResult };
+
+// ── Auth Service ──────────────────────────────────────────────────────────────
+
 export const authService = {
+
   /**
-   * Mock OTP sender: sends a mock verification code
+   * Step 1 — Sends a real OTP via Firebase Phone Auth.
+   * For dev/testing: add test numbers in Firebase Console first so you're not
+   * charged for SMS during development.
    */
-  async sendOTP(phoneNumber: string): Promise<{ verificationId: string } | any> {
-    if (!IS_FIREBASE_ENABLED) {
-      console.log(`[Mock Auth] OTP Code '123456' sent to ${phoneNumber}`);
-      return { verificationId: 'mock-verification-id', phoneNumber };
-    }
-    
-    // Standard Firebase Auth Phone flow requires recaptchaVerifier (configured in UI component)
-    throw new Error("reCAPTCHA verifier required for real firebase authentication phone flow.");
+  async sendOTP(phoneNumber: string): Promise<ConfirmationResult> {
+    return await signInWithPhoneNumber(firebaseAuth, phoneNumber);
   },
 
   /**
-   * Verifies the OTP code and returns/registers the user session
+   * Step 2 — Confirms the 6-digit OTP code.
+   * Returns an AuthSession. isNewUser=true means the user has no Firestore doc yet.
    */
   async verifyOTP(
-    verificationId: string,
+    confirmationResult: ConfirmationResult,
     code: string,
     phoneNumber: string,
-    role: UserRole
   ): Promise<AuthSession> {
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Network simulation
-
-    if (!IS_FIREBASE_ENABLED || verificationId === 'mock-verification-id') {
-      if (code !== '123456') {
-        throw new Error("Invalid verification code. Enter '123456' for mock mode.");
-      }
-      
-      const existingUser = mockUsers[phoneNumber];
-      if (existingUser) {
-        return {
-          uid: existingUser.uid,
-          phoneNumber: existingUser.phone,
-          role: existingUser.role,
-          displayName: existingUser.name,
-        };
-      } else {
-        // Create new user in mock db
-        const newUser = {
-          uid: `mock-user-${Date.now()}`,
-          phone: phoneNumber,
-          role: role,
-          name: role === 'client' ? 'Alex Johnson' : 'Alex Rivers',
-        };
-        mockUsers[phoneNumber] = newUser;
-        return {
-          uid: newUser.uid,
-          phoneNumber: newUser.phone,
-          role: newUser.role,
-          displayName: newUser.name,
-        };
-      }
+    const credential = await confirmationResult.confirm(code);
+    if (!credential?.user) {
+      throw new Error('OTP confirmation failed — no user credential returned.');
     }
 
-    // Real Firebase auth verification logic (should be called with confirmationResult)
-    throw new Error("Real verification requires Firebase ConfirmationResult object.");
+    const uid  = credential.user.uid;
+    const phone = credential.user.phoneNumber || phoneNumber;
+
+    // Check for existing Firestore document
+    const snap = await getDoc(doc(db, 'users', uid));
+
+    if (snap.exists()) {
+      const data = snap.data() as UserDocument;
+      return {
+        uid,
+        phoneNumber: phone,
+        role: data.role,
+        displayName: data.name,
+        isNewUser: false,
+        profilePhotoUrl: data.profilePhotoUrl,
+      };
+    }
+
+    // First-time user — document doesn't exist yet
+    return {
+      uid,
+      phoneNumber: phone,
+      role: 'client',
+      displayName: '',
+      isNewUser: true,
+    };
   },
 
   /**
-   * Signs the current user session out
+   * Writes users/{uid} and (if provider) providers/{uid} in Firestore.
+   * Called once, at the end of the registration screen.
    */
-  async signOut(): Promise<void> {
-    if (IS_FIREBASE_ENABLED && auth) {
-      await firebaseSignOut(auth);
+  async completeRegistration(data: {
+    uid: string;
+    name: string;
+    phone: string;
+    role: UserRole;
+    address?: string;
+    idProof?: string;
+    categories?: string[];
+    yearsExperience?: string;
+  }): Promise<void> {
+    const now = new Date();
+
+    await setDoc(doc(db, 'users', data.uid), {
+      uid:     data.uid,
+      name:    data.name,
+      phone:   data.phone,
+      role:    data.role,
+      address: data.address  || '',
+      idProof: data.idProof  || '',
+      createdAt: now,
+    });
+
+    if (data.role === 'provider') {
+      await setDoc(doc(db, 'providers', data.uid), {
+        uid:              data.uid,
+        name:             data.name,
+        phone:            data.phone,
+        categories:       data.categories    || [],
+        yearsExperience:  data.yearsExperience || '0',
+        verificationStatus: 'pending',
+        isOnline:         false,
+        isAvailable:      true,
+        rating:           0,
+        totalJobs:        0,
+        createdAt:        now,
+      });
     }
-    console.log("[Auth Service] Session cleared.");
-  }
+  },
+
+  /** Signs the current Firebase user out. */
+  async signOut(): Promise<void> {
+    await firebaseAuth.signOut();
+  },
+
+  /**
+   * Subscribes to Firebase auth state changes.
+   * Fires immediately with the current user (or null), then on every change.
+   * Returns an unsubscribe function — call it on component unmount.
+   */
+  onAuthStateChanged(callback: (uid: string | null) => void): () => void {
+    return onAuthStateChanged(firebaseAuth, (user: User | null) => {
+      callback(user?.uid ?? null);
+    });
+  },
 };

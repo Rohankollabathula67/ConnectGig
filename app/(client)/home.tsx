@@ -35,7 +35,7 @@ const MOCK_WORKERS = [
     subtitle: 'Expert Electrician',
     rating: 4.9,
     distance: '0.8 mi',
-    hourlyRate: 45,
+    hourlyRate: 350,
     isVerified: true,
     isOnline: true,
   },
@@ -44,7 +44,7 @@ const MOCK_WORKERS = [
     subtitle: 'Professional Cleaner',
     rating: 5.0,
     distance: '1.2 mi',
-    hourlyRate: 30,
+    hourlyRate: 220,
     isTopPro: true,
     isOnline: true,
   },
@@ -53,14 +53,24 @@ const MOCK_WORKERS = [
     subtitle: 'Master Plumber',
     rating: 4.8,
     distance: '2.5 mi',
-    hourlyRate: 55,
+    hourlyRate: 380,
     isVerified: true,
     isOnline: false,
   },
 ];
 
+const QUICK_FILTER_MAPPINGS: Record<string, { category: string; description: string }> = {
+  'Fix a leak': { category: 'Plumber', description: 'Leaking pipe or faucet repair' },
+  'Gardening': { category: 'Gardener', description: 'Lawn mowing and garden maintenance' },
+  'Smart Home Setup': { category: 'IT Support', description: 'Configure smart home devices, router, or smart TV' },
+  'Deep Cleaning': { category: 'Cleaner', description: 'Full house deep cleaning' },
+  'AC Repair': { category: 'Electrician', description: 'Air conditioner servicing and repair' },
+  'Painting': { category: 'Painter', description: 'Interior or wall painting service' },
+};
+
 export default function ClientHomeScreen() {
   const [selectedFilter, setSelectedFilter] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState('');
   const { location } = useLocation();
   const { user } = useAuthStore();
   const { activeRequest, subscribeToActiveRequest, unsubscribeFromActiveRequest } = useRequestStore();
@@ -75,6 +85,29 @@ export default function ClientHomeScreen() {
   }, []);
 
   const chipItems = QUICK_FILTERS.map((f) => ({ id: f, label: f }));
+
+  const handleSelectFilter = (filterId: string) => {
+    setSelectedFilter(filterId);
+    const mapping = QUICK_FILTER_MAPPINGS[filterId];
+    if (mapping) {
+      router.push({
+        pathname: '/service-request',
+        params: { category: mapping.category, description: mapping.description },
+      });
+    }
+  };
+
+  const filteredCategories = CATEGORIES.filter((cat) =>
+    cat.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cat.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredProviders = MOCK_WORKERS.filter((worker) =>
+    worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    worker.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const hasSearchQuery = searchQuery.trim().length > 0;
 
   const nearbyMarkers = location
     ? [
@@ -92,7 +125,7 @@ export default function ClientHomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>Good morning,</Text>
-            <Text style={styles.userName}>Kollabathula Rohan</Text>
+            <Text style={styles.userName}>{user?.displayName || 'Kollabathula Rohan'}</Text>
           </View>
           <Pressable
             onPress={() => router.push('/notifications')}
@@ -104,7 +137,12 @@ export default function ClientHomeScreen() {
 
         {/* ── Search Bar ──────────────────────────────── */}
         <View style={styles.searchSection}>
-          <SearchBar editable={false} onFocus={() => { }} />
+          <SearchBar
+            editable={true}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search services or providers..."
+          />
         </View>
 
         {/* ── Quick Filters ───────────────────────────── */}
@@ -112,75 +150,140 @@ export default function ClientHomeScreen() {
           <ChipGroup
             items={chipItems}
             selectedId={selectedFilter}
-            onSelect={setSelectedFilter}
+            onSelect={handleSelectFilter}
           />
         </View>
 
-        {/* ── Services Grid ───────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Services</Text>
-            <Pressable>
-              <Text style={styles.viewAll}>View All</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.servicesGrid}>
-            {CATEGORIES.map((cat) => (
-              <View key={cat.id} style={styles.serviceItem}>
-                <GigCard
-                  label={cat.label}
-                  icon={cat.icon}
-                  color={cat.color}
-                  onPress={() => router.push('/service-request')}
-                />
+        {hasSearchQuery ? (
+          <View style={styles.searchResultsContainer}>
+            {filteredCategories.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Matching Services</Text>
+                <View style={styles.servicesGrid}>
+                  {filteredCategories.map((cat) => (
+                    <View key={cat.id} style={styles.serviceItem}>
+                      <GigCard
+                        label={cat.label}
+                        icon={cat.icon}
+                        color={cat.color}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/service-request',
+                            params: { category: cat.label },
+                          })
+                        }
+                      />
+                    </View>
+                  ))}
+                </View>
               </View>
-            ))}
-          </View>
-        </View>
+            )}
 
-        {/* ── Workers Near You ────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Workers near you</Text>
-            <Badge type="online" label="12 Active Now" />
-          </View>
-
-          <Card variant="elevated" style={styles.mapCard} padding={0}>
-            <Pressable onPress={() => router.push('/map' as any)}>
-              <View style={styles.mapContainer}>
-                <CustomMapView
-                  markers={nearbyMarkers}
-                  origin={location || undefined}
-                  interactive={false}
-                />
+            {filteredProviders.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Matching Providers</Text>
+                <View style={styles.workersList}>
+                  {filteredProviders.map((worker, index) => (
+                    <WorkerCard
+                      key={index}
+                      {...worker}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/service-request',
+                          params: { category: worker.subtitle.replace('Expert ', '').replace('Master ', '').replace('Professional ', '') },
+                        })
+                      }
+                    />
+                  ))}
+                </View>
               </View>
-              <View style={styles.viewMapButton}>
-                <Text style={styles.viewMapText}>View Full Map</Text>
-              </View>
-            </Pressable>
-          </Card>
-        </View>
+            )}
 
-        {/* ── AI Recommended ──────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.aiHeader}>
-              <Text style={styles.sectionTitle}>AI Recommended</Text>
-              <Info size={16} color={Colors.textMuted} strokeWidth={2} />
+            {filteredCategories.length === 0 && filteredProviders.length === 0 && (
+              <View style={styles.noResults}>
+                <Text style={styles.noResultsText}>No services or providers found matching "{searchQuery}"</Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <>
+            {/* ── Services Grid ───────────────────────────── */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Services</Text>
+                <Pressable onPress={() => router.push('/all-services')}>
+                  <Text style={styles.viewAll}>View All</Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.servicesGrid}>
+                {CATEGORIES.map((cat) => (
+                  <View key={cat.id} style={styles.serviceItem}>
+                    <GigCard
+                      label={cat.label}
+                      icon={cat.icon}
+                      color={cat.color}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/service-request',
+                          params: { category: cat.label },
+                        })
+                      }
+                    />
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
 
-          <View style={styles.workersList}>
-            {MOCK_WORKERS.map((worker, index) => (
-              <WorkerCard
-                key={index}
-                {...worker}
-                onPress={() => { }}
-              />
-            ))}
-          </View>
-        </View>
+            {/* ── Workers Near You ────────────────────────── */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Workers near you</Text>
+                <Badge type="online" label="12 Active Now" />
+              </View>
+
+              <Card variant="elevated" style={styles.mapCard} padding={0}>
+                <Pressable onPress={() => router.push('/map' as any)}>
+                  <View style={styles.mapContainer}>
+                    <CustomMapView
+                      markers={nearbyMarkers}
+                      origin={location || undefined}
+                      interactive={false}
+                    />
+                  </View>
+                  <View style={styles.viewMapButton}>
+                    <Text style={styles.viewMapText}>View Full Map</Text>
+                  </View>
+                </Pressable>
+              </Card>
+            </View>
+
+            {/* ── AI Recommended ──────────────────────────── */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.aiHeader}>
+                  <Text style={styles.sectionTitle}>AI Recommended</Text>
+                  <Info size={16} color={Colors.textMuted} strokeWidth={2} />
+                </View>
+              </View>
+
+              <View style={styles.workersList}>
+                {MOCK_WORKERS.map((worker, index) => (
+                  <WorkerCard
+                    key={index}
+                    {...worker}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/service-request',
+                        params: { category: worker.subtitle.replace('Expert ', '').replace('Master ', '').replace('Professional ', '') },
+                      })
+                    }
+                  />
+                ))}
+              </View>
+            </View>
+          </>
+        )}
 
         {/* Bottom spacing for tab bar */}
         <View style={{ height: 100 }} />
@@ -372,5 +475,19 @@ const styles = StyleSheet.create({
     ...Typography.body2SemiBold,
     color: Colors.textWhite,
     fontWeight: '700',
+  },
+  searchResultsContainer: {
+    gap: Spacing.md,
+  },
+  noResults: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xxxl,
+    paddingHorizontal: Spacing.xl,
+  },
+  noResultsText: {
+    ...Typography.body2,
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
 });

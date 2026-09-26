@@ -5,6 +5,7 @@
  */
 
 import { Alert } from 'react-native';
+import { formatCurrency } from '../utils/currency';
 
 export interface PaymentDetails {
   requestId: string;
@@ -19,7 +20,7 @@ export const paymentsService = {
    * Initialize a new checkout order
    */
   async processPayment(details: PaymentDetails): Promise<{ success: boolean; transactionId?: string; error?: string }> {
-    console.log(`[Payments] Initiating checkout order for request ${details.requestId} (Amount: $${details.amount})`);
+    console.log(`[Payments] Initiating checkout order for request ${details.requestId} (Amount: ${formatCurrency(details.amount)})`);
 
     // Simulate Network Request latency (1.8 seconds)
     return new Promise((resolve) => {
@@ -33,7 +34,7 @@ export const paymentsService = {
           
           Alert.alert(
             "Payment Successful",
-            `Thank you! Your payment of $${details.amount}.00 has been verified.\nTransaction ID: ${transactionId}`
+            `Thank you! Your payment of ${formatCurrency(details.amount)} has been verified.\nTransaction ID: ${transactionId}`
           );
 
           resolve({ success: true, transactionId });

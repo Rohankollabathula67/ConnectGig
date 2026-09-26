@@ -4,10 +4,13 @@
  */
 
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { ChevronLeft, Check, Edit3, Info } from 'lucide-react-native';
+import { router, useLocalSearchParams } from 'expo-router';
+import { ChevronLeft, Check, Edit3, Info, Camera } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { storage, IS_FIREBASE_ENABLED } from '../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii, Shadows } from '../constants/spacing';
 import { Typography } from '../constants/typography';
@@ -16,6 +19,7 @@ import { Card } from '../components/ui/Card';
 import { useAuthStore } from '../store/authStore';
 import { useRequestStore } from '../store/requestStore';
 import { useLocationStore } from '../store/locationStore';
+import { formatCurrency } from '../utils/currency';
 
 
 const DATES = [
@@ -29,19 +33,70 @@ const DATES = [
 const TIMES = ['Morning', 'Afternoon', 'Evening'];
 
 const BUDGETS = [
-  { id: 'standard', label: 'STANDARD', price: 45, recommended: true },
-  { id: 'quick_fix', label: 'QUICK FIX', price: 30 },
-  { id: 'premium', label: 'PREMIUM', price: 60 },
+  { id: 'standard', label: 'STANDARD', price: 450, recommended: true },
+  { id: 'quick_fix', label: 'QUICK FIX', price: 250 },
+  { id: 'premium', label: 'PREMIUM', price: 800 },
   { id: 'custom', label: 'Custom', price: 0, isCustom: true },
 ];
 
 export default function ServiceRequestScreen() {
-  const [description, setDescription] = useState('');
+  const params = useLocalSearchParams<{ category?: string; description?: string }>();
+  const [description, setDescription] = useState(params.description || '');
+  const [category] = useState(params.category || 'Plumber');
   const [selectedDate, setSelectedDate] = useState(0);
   const [selectedTime, setSelectedTime] = useState(0);
   const [selectedBudget, setSelectedBudget] = useState('standard');
+  const [problemImage, setProblemImage] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const { user } = useAuthStore();
+
+  const handlePickProblemImage = () => {
+    Alert.alert(
+      "Problem Photo",
+      "Attach a photo of the issue",
+      [
+        { text: "Take Photo", onPress: () => triggerProblemImagePicker(true) },
+        { text: "Choose from Gallery", onPress: () => triggerProblemImagePicker(false) },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
+  const triggerProblemImagePicker = async (useCamera: boolean) => {
+    try {
+      let result;
+      if (useCamera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert("Permission Denied", "Camera permission is required.");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+        });
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert("Permission Denied", "Gallery permission is required.");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setProblemImage(result.assets[0].uri);
+      }
+    } catch (err) {
+      console.warn("Error picking problem photo:", err);
+    }
+  };
   const { createRequest, loading } = useRequestStore();
   const { userLocation } = useLocationStore();
 
@@ -52,23 +107,41 @@ export default function ServiceRequestScreen() {
       Alert.alert("Required Field", "Please describe what you need help with.");
       return;
     }
-    const finalBudget = activeBudget?.price || 45;
+    const finalBudget = activeBudget?.price || 450;
     const clientId = user?.uid || 'mock-client-uid';
     const clientName = user?.displayName || 'Alex Johnson';
     const loc = userLocation || { latitude: 37.78825, longitude: -122.4324 };
     
+    setUploadingPhoto(true);
+    let uploadedPhotoUrl = null;
     try {
+      if (problemImage) {
+        const tempRequestId = `req_photo_${Date.now()}`;
+        if (IS_FIREBASE_ENABLED) {
+          const response = await fetch(problemImage);
+          const blob = await response.blob();
+          const storageRef = ref(storage, `request-photos/${tempRequestId}.jpg`);
+          await uploadBytes(storageRef, blob);
+          uploadedPhotoUrl = await getDownloadURL(storageRef);
+        } else {
+          uploadedPhotoUrl = problemImage; // Mock URL is local URI
+        }
+      }
+
       await createRequest(
         clientId,
         clientName,
-        'Plumber',
+        category,
         description,
         finalBudget,
-        loc
+        loc,
+        uploadedPhotoUrl
       );
       router.push('/searching');
     } catch (err) {
       console.warn("Error creating request", err);
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -80,7 +153,7 @@ export default function ServiceRequestScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Book Service</Text>
+        <Text style={styles.headerTitle}>Book {category}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -101,6 +174,27 @@ export default function ServiceRequestScreen() {
             value={description}
             onChangeText={setDescription}
           />
+          
+          {/* Add Photo Section */}
+          <Text style={[styles.sectionLabel, { marginTop: Spacing.md, marginBottom: 4 }]}>
+            Add a photo (optional)
+          </Text>
+          <Text style={[styles.helperText, { marginBottom: Spacing.sm }]}>
+            Help your provider understand the issue faster
+          </Text>
+          {problemImage ? (
+            <View style={styles.imagePreviewContainer}>
+              <Image source={{ uri: problemImage }} style={styles.imagePreview} />
+              <Pressable onPress={() => setProblemImage(null)} style={styles.removeImageBtn}>
+                <Text style={styles.removeImageText}>×</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable onPress={handlePickProblemImage} style={styles.addPhotoBtn}>
+              <Camera size={20} color={Colors.primary} strokeWidth={2} />
+              <Text style={styles.addPhotoText}>Add Photo</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* When */}
@@ -154,7 +248,7 @@ export default function ServiceRequestScreen() {
                     {selectedBudget === b.id && b.recommended && (
                       <Check size={14} color={Colors.primary} strokeWidth={3} />
                     )}
-                    <Text style={[styles.budgetPrice, selectedBudget === b.id && styles.budgetPriceActive]}>${b.price}</Text>
+                    <Text style={[styles.budgetPrice, selectedBudget === b.id && styles.budgetPriceActive]}>{formatCurrency(b.price)}</Text>
                   </>
                 )}
               </Pressable>
@@ -176,7 +270,7 @@ export default function ServiceRequestScreen() {
         <View style={styles.costRow}>
           <View>
             <Text style={styles.costLabel}>ESTIMATED COST</Text>
-            <Text style={styles.costAmount}>${activeBudget?.price || 0}.00</Text>
+            <Text style={styles.costAmount}>{formatCurrency(activeBudget?.price || 0)}</Text>
           </View>
           <View style={styles.costRight}>
             <Text style={styles.feeLabel}>PROCESSING FEE</Text>
@@ -245,4 +339,56 @@ const styles = StyleSheet.create({
   costRight: { alignItems: 'flex-end' },
   feeLabel: { ...Typography.overline, color: Colors.textMuted, letterSpacing: 1 },
   feeText: { ...Typography.body2Medium, color: Colors.textSecondary },
+  helperText: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+  },
+  addPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    height: 52,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: Radii.card,
+    backgroundColor: Colors.surface,
+    marginTop: Spacing.xs,
+  },
+  addPhotoText: {
+    ...Typography.body2SemiBold,
+    color: Colors.primary,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+    borderRadius: Radii.card,
+    overflow: 'visible',
+    marginTop: Spacing.xs,
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: Radii.card,
+    resizeMode: 'cover',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: Colors.error,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.floating,
+  },
+  removeImageText: {
+    color: Colors.textWhite,
+    fontWeight: 'bold',
+    fontSize: 16,
+    lineHeight: 20,
+  },
 });

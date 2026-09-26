@@ -6,6 +6,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { MessageCircle } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { Spacing } from '../../constants/spacing';
@@ -34,7 +35,11 @@ export default function MessagesScreen() {
           </View>
         ) : (
           MOCK_CHATS.map((chat) => (
-            <Pressable key={chat.id} style={({ pressed }) => [styles.chatItem, pressed && styles.chatPressed]}>
+            <Pressable
+              key={chat.id}
+              onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.id, name: chat.name } })}
+              style={({ pressed }) => [styles.chatItem, pressed && styles.chatPressed]}
+            >
               <Avatar name={chat.name} size="lg" showOnline={chat.online} />
               <View style={styles.chatInfo}>
                 <View style={styles.chatNameRow}>

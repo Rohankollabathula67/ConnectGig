@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View, Alert } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ChevronLeft, Phone, MessageCircle, Languages, HelpCircle, Clock } from 'lucide-react-native';
@@ -154,6 +154,13 @@ export default function JobTrackingScreen() {
             </View>
           </View>
 
+          {activeRequest?.problemImageUrl && (
+            <View style={styles.problemPreviewRow}>
+              <Text style={styles.problemPreviewLabel}>Attached Issue Photo:</Text>
+              <Image source={{ uri: activeRequest.problemImageUrl }} style={styles.problemPreviewThumb} />
+            </View>
+          )}
+
           {/* Action buttons */}
           <View style={styles.actionRow}>
             <Pressable style={styles.actionBtn}>
@@ -178,7 +185,28 @@ export default function JobTrackingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.surface },
+  container: { flex: 1, backgroundColor: Colors.background },
+  problemPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+  },
+  problemPreviewLabel: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  problemPreviewThumb: {
+    width: 50,
+    height: 50,
+    borderRadius: Radii.sm,
+    resizeMode: 'cover',
+    backgroundColor: Colors.inputBg,
+  },
   topBar: { backgroundColor: Colors.background, zIndex: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.screenPadding, paddingVertical: Spacing.sm },
   backBtn: { width: 40, height: 40, justifyContent: 'center' },

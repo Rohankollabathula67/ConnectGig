@@ -59,47 +59,50 @@ const MOCK_NOTIFICATIONS: MockNotification[] = [
 ];
 
 export default function NotificationsScreen() {
-  const groups = [...new Set(MOCK_NOTIFICATIONS.map((n) => n.group))];
+  const groupedNotifications = MOCK_NOTIFICATIONS.reduce((acc, n) => {
+    (acc[n.group] = acc[n.group] || []).push(n);
+    return acc;
+  }, {} as Record<string, MockNotification[]>);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
-          </Pressable>
-          <Text style={styles.title}>Notifications</Text>
-        </View>
-        <View style={styles.headerRight}>
-          <Pressable>
-            <Text style={styles.markAllRead}>Mark all read</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Notification List */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {groups.map((group) => (
-          <View key={group}>
-            <View style={styles.groupHeader}>
-              <Text style={styles.groupTitle}>{group}</Text>
-            </View>
-            {MOCK_NOTIFICATIONS.filter((n) => n.group === group).map((notif, index) => (
-              <NotificationItem
-                key={index}
-                type={notif.type}
-                title={notif.title}
-                body={notif.body}
-                time={notif.time}
-                isRead={notif.isRead}
-              />
-            ))}
+          <View style={styles.headerLeft}>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
+            </Pressable>
+            <Text style={styles.title}>Notifications</Text>
           </View>
-        ))}
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.headerRight}>
+            <Pressable>
+              <Text style={styles.markAllRead}>Mark all read</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Notification List */}
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {Object.entries(groupedNotifications).map(([group, list]) => (
+            <View key={group}>
+              <View style={styles.groupHeader}>
+                <Text style={styles.groupTitle}>{group}</Text>
+              </View>
+              {list.map((notif, index) => (
+                <NotificationItem
+                  key={index}
+                  type={notif.type}
+                  title={notif.title}
+                  body={notif.body}
+                  time={notif.time}
+                  isRead={notif.isRead}
+                />
+              ))}
+            </View>
+          ))}
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
   );
 }
 

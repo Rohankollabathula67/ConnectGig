@@ -1,26 +1,121 @@
 /**
- * ConnectGig — Client Profile Screen
+ * ConnectGig — Client Profile Screen (§3.9)
+ * Features dynamic user details, camera overlays for image-picker photo updates,
+ * and responsive menu navigation linking settings, reviews, privacy, and support.
  */
 
-import { router } from 'expo-router';
-import { ChevronRight, HelpCircle, LogOut, Settings, Shield, Star } from 'lucide-react-native';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { ChevronRight, HelpCircle, LogOut, Settings, Shield, Star, Camera } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
 import { Colors } from '../../constants/colors';
 import { Radii, Shadows, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
+import { useAuthStore } from '../../store/authStore';
+import { db, storage, IS_FIREBASE_ENABLED } from '../../services/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const MENU_ITEMS = [
-  { icon: Settings, label: 'Account Settings', route: '' },
-  { icon: Star, label: 'My Reviews', route: '' },
-  { icon: Shield, label: 'Privacy & Security', route: '' },
-  { icon: HelpCircle, label: 'Help & Support', route: '' },
+  { icon: Settings, label: 'Account Settings', route: '/settings' },
+  { icon: Star, label: 'My Reviews', route: '/my-reviews' },
+  { icon: Shield, label: 'Privacy & Security', route: '/privacy' },
+  { icon: HelpCircle, label: 'Help & Support', route: '/help-support' },
 ];
 
 export default function ClientProfileScreen() {
+  const { user, updateProfile } = useAuthStore();
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const name = user?.displayName || 'Kollabathula Rohan';
+  const phone = user?.phoneNumber || '+91 7674834552';
+  const photoUrl = user?.profilePhotoUrl;
+
+  const handlePickImage = () => {
+    Alert.alert(
+      "Profile Photo",
+      "Choose an option to update your profile photo",
+      [
+        { text: "Take Photo", onPress: () => triggerImagePicker(true) },
+        { text: "Choose from Gallery", onPress: () => triggerImagePicker(false) },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
+  const triggerImagePicker = async (useCamera: boolean) => {
+    try {
+      let result;
+      if (useCamera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert("Permission Denied", "Photo gallery access is required.");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const localUri = result.assets[0].uri;
+        await uploadImageFile(localUri);
+      }
+    } catch (err) {
+      console.warn("Image picker error:", err);
+      Alert.alert("Error", "Could not pick image.");
+    }
+  };
+
+  const uploadImageFile = async (localUri: string) => {
+    const userId = user?.uid || 'mock-client-uid';
+    setUploadingImage(true);
+    try {
+      let finalUrl = localUri;
+      if (IS_FIREBASE_ENABLED) {
+        const response = await fetch(localUri);
+        const blob = await response.blob();
+        const storageRef = ref(storage, `profile-photos/${userId}.jpg`);
+        await uploadBytes(storageRef, blob);
+        finalUrl = await getDownloadURL(storageRef);
+        
+        // Write to DB
+        const role = user?.role === 'provider' ? 'providers' : 'users';
+        const userDocRef = doc(db, role, userId);
+        await updateDoc(userDocRef, { profilePhotoUrl: finalUrl });
+      }
+      
+      // Update store state
+      updateProfile({ profilePhotoUrl: finalUrl });
+      Alert.alert("Success", "Profile photo updated!");
+    } catch (error) {
+      console.warn("Upload failed, keeping locally", error);
+      updateProfile({ profilePhotoUrl: localUri });
+      Alert.alert("Loaded", "Photo loaded locally.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -28,10 +123,19 @@ export default function ClientProfileScreen() {
 
         {/* Profile Card */}
         <Card variant="elevated" style={styles.profileCard}>
-          <Avatar name="Alex Johnson" size="xl" />
-          <Text style={styles.name}>Kollabathula Rohan</Text>
-          <Text style={styles.phone}>+91 7674834552</Text>
-          <Pressable style={styles.editButton}>
+          <View style={styles.avatarContainer}>
+            <Avatar name={name} uri={photoUrl} size="xl" />
+            <Pressable onPress={handlePickImage} style={styles.cameraIconOverlay}>
+              {uploadingImage ? (
+                <ActivityIndicator size="small" color={Colors.textWhite} />
+              ) : (
+                <Camera size={16} color={Colors.textWhite} strokeWidth={2} />
+              )}
+            </Pressable>
+          </View>
+          <Text style={styles.name}>{name}</Text>
+          <Text style={styles.phone}>{phone}</Text>
+          <Pressable onPress={() => router.push('/edit-profile')} style={styles.editButton}>
             <Text style={styles.editText}>Edit Profile</Text>
           </Pressable>
         </Card>
@@ -39,7 +143,11 @@ export default function ClientProfileScreen() {
         {/* Menu Items */}
         <View style={styles.menuSection}>
           {MENU_ITEMS.map((item, index) => (
-            <Pressable key={index} style={({ pressed }) => [styles.menuItem, pressed && styles.menuPressed]}>
+            <Pressable
+              key={index}
+              onPress={() => item.route && router.push(item.route as any)}
+              style={({ pressed }) => [styles.menuItem, pressed && styles.menuPressed]}
+            >
               <item.icon size={20} color={Colors.textSecondary} strokeWidth={2} />
               <Text style={styles.menuLabel}>{item.label}</Text>
               <ChevronRight size={18} color={Colors.textMuted} strokeWidth={2} />
@@ -66,8 +174,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.surface },
   content: { paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.lg },
   title: { ...Typography.title1, color: Colors.textPrimary, marginBottom: Spacing.xxl },
+  
   profileCard: { alignItems: 'center', paddingVertical: Spacing.xxxl, marginBottom: Spacing.xxl },
-  name: { ...Typography.title2, color: Colors.textPrimary, marginTop: Spacing.md },
+  avatarContainer: { position: 'relative', marginBottom: Spacing.md },
+  cameraIconOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: Colors.primary,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  
+  name: { ...Typography.title2, color: Colors.textPrimary, marginTop: Spacing.xs },
   phone: { ...Typography.body2, color: Colors.textSecondary, marginTop: 4 },
   editButton: { marginTop: Spacing.lg, paddingVertical: 8, paddingHorizontal: 24, borderRadius: Radii.full, borderWidth: 1, borderColor: Colors.primary },
   editText: { ...Typography.body2SemiBold, color: Colors.primary },

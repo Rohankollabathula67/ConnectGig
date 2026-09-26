@@ -19,7 +19,8 @@ interface RequestState {
     category: string,
     description: string,
     budget: number,
-    location: { latitude: number; longitude: number }
+    location: { latitude: number; longitude: number },
+    problemImageUrl?: string | null
   ) => Promise<string>;
   
   cancelRequest: (requestId: string) => Promise<void>;
@@ -35,7 +36,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
   error: null,
   activeListener: null,
 
-  createRequest: async (clientId, clientName, category, description, budget, location) => {
+  createRequest: async (clientId, clientName, category, description, budget, location, problemImageUrl) => {
     set({ loading: true, error: null });
     try {
       const data: Omit<ServiceRequest, 'requestId' | 'createdAt'> = {
@@ -55,6 +56,7 @@ export const useRequestStore = create<RequestState>((set, get) => ({
         currentRadiusKm: 8,
         broadcastedProviderIds: [],
         acceptedProviderId: null,
+        problemImageUrl: problemImageUrl || null,
       };
       const docId = await firestoreService.createRequest(data);
       set({ loading: false });

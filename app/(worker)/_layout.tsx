@@ -6,7 +6,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { LayoutDashboard, DollarSign, Plus, CalendarDays, User } from 'lucide-react-native';
+import { LayoutDashboard, IndianRupee, Plus, CalendarDays, User, Briefcase } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Shadows, Layout } from '../../constants/spacing';
@@ -40,7 +40,7 @@ export default function WorkerLayout() {
         name="earnings"
         options={{
           title: 'Earnings',
-          tabBarIcon: ({ color, size }) => <DollarSign size={size} color={color} strokeWidth={2} />,
+          tabBarIcon: ({ color, size }) => <IndianRupee size={size} color={color} strokeWidth={2} />,
         }}
       />
       <Tabs.Screen
@@ -49,7 +49,7 @@ export default function WorkerLayout() {
           title: '',
           tabBarIcon: () => (
             <View style={styles.elevatedTab}>
-              <Plus size={28} color={Colors.textWhite} strokeWidth={2.5} />
+              <Briefcase size={26} color={Colors.textWhite} strokeWidth={2} />
             </View>
           ),
         }}

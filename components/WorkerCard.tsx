@@ -13,6 +13,7 @@ import { Typography } from '../constants/typography';
 import { Avatar } from './ui/Avatar';
 import { Badge } from './ui/Badge';
 import { StatusDot } from './ui/StatusDot';
+import { formatCurrency } from '../utils/currency';
 
 interface WorkerCardProps {
   name: string;
@@ -73,7 +74,7 @@ export function WorkerCard({
 
       {/* Right: Rate */}
       <View style={styles.rateContainer}>
-        <Text style={styles.rate}>${hourlyRate}</Text>
+        <Text style={styles.rate}>{formatCurrency(hourlyRate)}</Text>
         <Text style={styles.rateLabel}>/hr</Text>
       </View>
     </Pressable>

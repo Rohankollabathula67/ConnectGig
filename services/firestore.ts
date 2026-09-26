@@ -130,7 +130,7 @@ export const firestoreService = {
           body: status === 'accepted' 
             ? 'Marcus Rivera has accepted your request and is en route!' 
             : status === 'completed' 
-              ? 'Your job has been successfully completed. Total payment: $45.' 
+              ? 'Your job has been successfully completed. Total payment: ₹450.' 
               : 'Status updated.',
         });
       }

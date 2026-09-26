@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -13,27 +13,43 @@ import { Spacing, Radii, Shadows } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
+import { formatCurrency } from '../../utils/currency';
 import { Button } from '../../components/ui/Button';
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-const CHART_DATA = [45, 60, 30, 85, 55, 40, 70];
+const CHART_DATA = [450, 600, 300, 850, 550, 400, 700];
 const MAX_CHART = Math.max(...CHART_DATA);
 
 const COMPLETED_JOBS = [
-  { title: 'Home Cleaning', date: 'Oct 24, 2025 · 2:30 PM', amount: '+$45.00', icon: '🧹' },
-  { title: 'Grocery Delivery', date: 'Oct 23, 2025 · 11:15 AM', amount: '+$12.50', icon: '🛒' },
-  { title: 'Sink Repair', date: 'Oct 22, 2025 · 09:00 AM', amount: '+$85.00', icon: '🔧' },
-  { title: 'Garden Maintenance', date: 'Oct 21, 2025 · 4:45 PM', amount: '+$60.00', icon: '🌿' },
+  { title: 'Home Cleaning', date: 'Oct 24, 2025 · 2:30 PM', amount: 450, icon: '🧹' },
+  { title: 'Grocery Delivery', date: 'Oct 23, 2025 · 11:15 AM', amount: 150, icon: '🛒' },
+  { title: 'Sink Repair', date: 'Oct 22, 2025 · 09:00 AM', amount: 850, icon: '🔧' },
+  { title: 'Garden Maintenance', date: 'Oct 21, 2025 · 4:45 PM', amount: 600, icon: '🌿' },
 ];
 
 export default function EarningsScreen() {
+  const [selectedRange, setSelectedRange] = React.useState('Last 7 Days');
+
+  const handleRangePicker = () => {
+    Alert.alert(
+      "Select Date Range",
+      "Choose a date range to filter your performance metrics:",
+      [
+        { text: "Last 7 Days", onPress: () => setSelectedRange("Last 7 Days") },
+        { text: "This Month", onPress: () => setSelectedRange("This Month") },
+        { text: "Custom Range", onPress: () => Alert.alert("Custom Range", "Select calendar dates on your dashboard.") },
+        { text: "Cancel", style: "cancel" }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Earnings</Text>
-          <Pressable style={styles.calendarBtn}>
+          <Pressable onPress={handleRangePicker} style={styles.calendarBtn}>
             <Calendar size={20} color={Colors.textPrimary} strokeWidth={2} />
           </Pressable>
         </View>
@@ -52,11 +68,11 @@ export default function EarningsScreen() {
                 <Text style={styles.withdrawText}>Withdraw</Text>
               </Pressable>
             </View>
-            <Text style={styles.balanceAmount}>$1,240.50</Text>
+            <Text style={styles.balanceAmount}>{formatCurrency(12400.50)}</Text>
             <View style={styles.balanceStats}>
               <View style={styles.balanceStat}>
                 <Text style={styles.balanceStatLabel}>This Week</Text>
-                <Text style={styles.balanceStatValue}>+$420.00</Text>
+                <Text style={styles.balanceStatValue}>+{formatCurrency(4200.00)}</Text>
               </View>
               <View style={styles.balanceStatDivider} />
               <View style={styles.balanceStat}>
@@ -72,7 +88,7 @@ export default function EarningsScreen() {
           <Card variant="default">
             <View style={styles.chartHeader}>
               <Text style={styles.chartTitle}>Weekly Performance</Text>
-              <Text style={styles.chartRange}>Last 7 Days</Text>
+              <Text style={styles.chartRange}>{selectedRange}</Text>
             </View>
             <View style={styles.chart}>
               {DAYS.map((day, i) => {
@@ -125,7 +141,7 @@ export default function EarningsScreen() {
                   <Text style={styles.jobDate}>{job.date}</Text>
                 </View>
                 <View style={styles.jobRight}>
-                  <Text style={styles.jobAmount}>{job.amount}</Text>
+                  <Text style={styles.jobAmount}>+{formatCurrency(job.amount)}</Text>
                   <Badge type="paid" />
                 </View>
               </View>

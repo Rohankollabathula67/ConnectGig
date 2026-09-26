@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, Alert } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MapPin, Clock, Navigation } from 'lucide-react-native';
@@ -17,6 +17,7 @@ import { Button } from '../../components/ui/Button';
 import { SwipeSlider } from '../../components/ui/SwipeSlider';
 import { useAuthStore } from '../../store/authStore';
 import { useRequestStore } from '../../store/requestStore';
+import { formatCurrency } from '../../utils/currency';
 
 export default function JobRequestScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -93,17 +94,24 @@ export default function JobRequestScreen() {
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>ESTIMATED PAY</Text>
-          <Text style={styles.statValue}>$ <Text style={styles.statAmount}>45</Text></Text>
+          <Text style={styles.statValue}>{formatCurrency(activeRequest?.estimatedCost || 450)}</Text>
         </View>
       </View>
 
       {/* Job Details */}
       <View style={styles.detailsSection}>
         <View style={styles.detailRow}>
-          <Text style={styles.jobCategory}>Professional Plumbing</Text>
+          <Text style={styles.jobCategory}>{activeRequest?.category || "Professional Plumbing"}</Text>
           <Badge type="paid" />
         </View>
-        <Text style={styles.jobDescription}>Leaking faucet repair in kitchen</Text>
+        <Text style={styles.jobDescription}>{activeRequest?.description || "Leaking faucet repair in kitchen"}</Text>
+        
+        {activeRequest?.problemImageUrl && (
+          <View style={styles.problemImageWrapper}>
+            <Text style={styles.problemImageTitle}>ATTACHED PROBLEM PHOTO</Text>
+            <Image source={{ uri: activeRequest.problemImageUrl }} style={styles.problemImage} />
+          </View>
+        )}
         <View style={styles.metaRow}>
           <Clock size={14} color={Colors.textMuted} strokeWidth={2} />
           <Text style={styles.metaText}>30-45 mins</Text>
@@ -129,6 +137,22 @@ export default function JobRequestScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  problemImageWrapper: {
+    marginTop: Spacing.md,
+    gap: Spacing.xs,
+  },
+  problemImageTitle: {
+    ...Typography.overline,
+    color: Colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  problemImage: {
+    width: '100%',
+    height: 120,
+    borderRadius: Radii.card,
+    resizeMode: 'cover',
+    backgroundColor: Colors.inputBg,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.screenPadding, paddingTop: Spacing.md, paddingBottom: Spacing.lg },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   liveIndicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.success },

@@ -1,44 +1,70 @@
 /**
- * ConnectGig — Firebase Initialization (§3.0)
- * Configures the Firebase Web SDK. If config keys are missing,
- * sets a flag to run in Simulated Mock Mode.
+ * ConnectGig — Firebase Initialization
+ *
+ * Uses the Firebase Web SDK (compatible with Expo Go during development).
+ * For real phone OTP on physical devices, a custom dev build is required.
+ *
+ * ⚠️  MOCK MODE IS PERMANENTLY REMOVED.
+ * If credentials are missing this module throws immediately at startup so the
+ * missing config is caught during development — not silently swallowed and
+ * accidentally shipped to production.
+ *
+ * Setup:
+ *   1. Copy .env.example → .env and fill in all values.
+ *   2. Restart the Metro bundler after editing .env.
  */
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getStorage, FirebaseStorage } from 'firebase/storage';
+import { getAuth, Auth } from 'firebase/auth';
 
-// Replace with your real Firebase web configuration
-const firebaseConfig = {
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: "",
-};
+// ── Validate all required env vars are present ────────────────────────────────
+const REQUIRED_VARS = [
+  'EXPO_PUBLIC_FIREBASE_API_KEY',
+  'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
+  'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
+  'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
+  'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+  'EXPO_PUBLIC_FIREBASE_APP_ID',
+] as const;
 
-// Check if actual configuration has been provided
-export const IS_FIREBASE_ENABLED = 
-  firebaseConfig.apiKey !== "" && 
-  firebaseConfig.projectId !== "";
+const missing = REQUIRED_VARS.filter(
+  (key) => !process.env[key] || process.env[key]!.trim() === ''
+);
 
-let app;
-let auth: any = null;
-let db: any = null;
-
-if (IS_FIREBASE_ENABLED) {
-  try {
-    app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    auth = getAuth(app);
-    db = getFirestore(app);
-    console.log("🔥 Firebase initialized successfully.");
-  } catch (error) {
-    console.warn("⚠️ Firebase initialization failed, running in MOCK mode.", error);
-  }
-} else {
-  console.log("ℹ️ No Firebase credentials. Running in Simulated MOCK Mode.");
+if (missing.length > 0) {
+  throw new Error(
+    `[ConnectGig] Missing Firebase environment variables:\n` +
+    missing.map((k) => `  • ${k}`).join('\n') +
+    `\n\nCopy .env.example → .env and fill in your Firebase project credentials.\n` +
+    `Get them from: Firebase Console → Project Settings → General → Your apps → SDK setup`
+  );
 }
 
-export { app, auth, db };
+// ── Firebase config ───────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
+  authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId:         process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket:     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
+};
+
+// ── Initialize (idempotent — safe to import multiple times) ───────────────────
+const app: FirebaseApp = getApps().length === 0
+  ? initializeApp(firebaseConfig)
+  : getApps()[0];
+
+// ── Service instances ─────────────────────────────────────────────────────────
+export const firebaseAuth: Auth = getAuth(app);
+export const db: Firestore      = getFirestore(app);
+export const storage: FirebaseStorage = getStorage(app);
+
+// Convenience flag — always true now (throws above if not configured)
+export const IS_FIREBASE_ENABLED = true;
+
+console.log(`🔥 Firebase initialised — project: ${firebaseConfig.projectId}`);
+
 export default app;

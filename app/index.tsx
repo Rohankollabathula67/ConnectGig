@@ -1,7 +1,10 @@
 /**
  * ConnectGig — Splash / Entry Screen
- * Animated splash matching §3.1: concentric circles, pulsing dot, wordmark
- * After animation, redirects to onboarding (or home if authenticated)
+ * Animated splash matching §3.1: concentric circles, pulsing dot, wordmark.
+ * After animation, checks auth state to route accordingly:
+ *   - Authenticated + existing user → home/dashboard (role-based)
+ *   - Authenticated + new user      → registration screen
+ *   - Unauthenticated               → onboarding
  */
 
 import React, { useEffect, useRef } from 'react';
@@ -9,11 +12,11 @@ import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Colors } from '../constants/colors';
 import { Typography } from '../constants/typography';
+import { useAuthStore } from '../store/authStore';
 
 export default function SplashEntry() {
   const pulse1 = useRef(new Animated.Value(0.4)).current;
   const pulse2 = useRef(new Animated.Value(0.3)).current;
-  const pulse3 = useRef(new Animated.Value(0.2)).current;
   const dotScale = useRef(new Animated.Value(1)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
   const dotsOpacity = useRef(new Animated.Value(0)).current;
@@ -53,13 +56,55 @@ export default function SplashEntry() {
       ),
     ]).start();
 
-    // Navigate after splash duration
-    const timer = setTimeout(() => {
-      router.replace('/(auth)/onboarding');
-    }, 3000);
+    // Navigate once both conditions are true:
+    //  1. Minimum animation time has elapsed (1.5s)
+    //  2. Auth store has resolved its onAuthStateChanged callback (ready === true)
+    let animationDone = false;
+    let storeReady = false;
 
-    return () => clearTimeout(timer);
+    function attemptNavigate() {
+      if (!animationDone || !storeReady) return;
+
+      const { isAuthenticated, user } = useAuthStore.getState();
+      if (isAuthenticated && user) {
+        if (user.isNewUser) {
+          router.replace('/(auth)/register');
+        } else if (user.role === 'provider') {
+          router.replace('/(worker)/dashboard');
+        } else {
+          router.replace('/(client)/home');
+        }
+      } else {
+        router.replace('/(auth)/onboarding');
+      }
+    }
+
+    // Minimum splash display time
+    const timer = setTimeout(() => {
+      animationDone = true;
+      attemptNavigate();
+    }, 1500);
+
+    // Subscribe to store ready flag
+    const unsub = useAuthStore.subscribe((state) => {
+      if (state.ready && !storeReady) {
+        storeReady = true;
+        unsub();
+        attemptNavigate();
+      }
+    });
+
+    // Fallback: if ready was already true before we subscribed (mock mode)
+    if (useAuthStore.getState().ready) {
+      storeReady = true;
+    }
+
+    return () => {
+      clearTimeout(timer);
+      unsub();
+    };
   }, []);
+
 
   return (
     <View style={styles.container}>
@@ -86,7 +131,7 @@ export default function SplashEntry() {
         <View style={[styles.orbitDot, styles.orbitDotSmall, { top: 50, left: 25 }]} />
         <View style={[styles.orbitDot, styles.orbitDotSmall, { bottom: 30, right: 50 }]} />
 
-        {/* Connection lines (simplified) */}
+        {/* Connection lines */}
         <View style={[styles.connectionLine, { top: 60, left: 45, width: 40, transform: [{ rotate: '30deg' }] }]} />
         <View style={[styles.connectionLine, { bottom: 50, right: 35, width: 35, transform: [{ rotate: '-45deg' }] }]} />
       </View>

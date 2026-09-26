@@ -35,4 +35,5 @@ export interface ServiceRequest {
   createdAt: Date;
   acceptedAt?: Date;
   completedAt?: Date;
+  problemImageUrl?: string | null;
 }

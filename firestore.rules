@@ -1,0 +1,136 @@
+// ConnectGig — Firestore Security Rules
+// Version: 1.0  |  Last updated: 2025
+//
+// Philosophy:
+//  - Deny all by default
+//  - Authenticated users can only read/write their own data
+//  - Provider profiles are publicly readable (for matching) but writable only by owner
+//  - Jobs can be read by the assigned parties; created by clients; updated by providers and clients
+//  - Admin writes (e.g., verificationStatus) are locked to backend Cloud Functions (no direct client write)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper Functions ──────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isClient() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client';
+    }
+
+    function isProvider() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'provider';
+    }
+
+    // ── Users Collection ──────────────────────────────────────────────────────
+    // users/{uid}
+    match /users/{uid} {
+      // Only the user themselves can read/write their own document
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── Providers Collection ──────────────────────────────────────────────────
+    // providers/{uid}
+    match /providers/{uid} {
+      // Any authenticated user can READ provider profiles (needed for matching, search)
+      allow read: if isSignedIn();
+      // Only the provider themselves can WRITE their own profile
+      allow write: if isOwner(uid)
+        // Admin-controlled fields cannot be set by the client
+        && !('verificationStatus' in request.resource.data && request.resource.data.verificationStatus != resource.data.verificationStatus);
+    }
+
+    // ── Jobs Collection ───────────────────────────────────────────────────────
+    // jobs/{jobId}
+    match /jobs/{jobId} {
+      // Clients can CREATE a job
+      allow create: if isClient()
+        && request.resource.data.clientId == request.auth.uid;
+
+      // Both client and assigned provider can READ a job
+      allow read: if isSignedIn()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.providerId == request.auth.uid);
+
+      // Provider can UPDATE status fields; client can cancel
+      allow update: if isSignedIn()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.providerId == request.auth.uid);
+
+      // No direct deletes
+      allow delete: if false;
+    }
+
+    // ── Job Requests ──────────────────────────────────────────────────────────
+    // jobRequests/{requestId}
+    match /jobRequests/{requestId} {
+      allow create: if isClient()
+        && request.resource.data.clientId == request.auth.uid;
+      allow read: if isSignedIn()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.providerId == request.auth.uid);
+      allow update: if isSignedIn()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.providerId == request.auth.uid);
+      allow delete: if false;
+    }
+
+    // ── Conversations & Messages ──────────────────────────────────────────────
+    // conversations/{conversationId}
+    match /conversations/{conversationId} {
+      allow read, write: if isSignedIn()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.providerId == request.auth.uid);
+
+      // messages sub-collection
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn()
+          && (get(/databases/$(database)/documents/conversations/$(conversationId)).data.clientId == request.auth.uid
+              || get(/databases/$(database)/documents/conversations/$(conversationId)).data.providerId == request.auth.uid);
+      }
+    }
+
+    // ── Ratings Collection ────────────────────────────────────────────────────
+    // ratings/{ratingId}
+    match /ratings/{ratingId} {
+      // Clients can submit ratings; both parties can read
+      allow create: if isClient()
+        && request.resource.data.fromUid == request.auth.uid;
+      allow read: if isSignedIn()
+        && (resource.data.fromUid == request.auth.uid
+            || resource.data.toUid == request.auth.uid);
+      allow update, delete: if false;
+    }
+
+    // ── Notifications Collection ──────────────────────────────────────────────
+    // notifications/{uid}/items/{notifId}
+    match /notifications/{uid}/items/{notifId} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── Payments Collection ───────────────────────────────────────────────────
+    // payments/{paymentId}
+    match /payments/{paymentId} {
+      // Only backend should write payment records; clients can read their own
+      allow read: if isSignedIn()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.providerId == request.auth.uid);
+      allow write: if false; // backend/Cloud Function only
+    }
+
+    // ── Deny everything else ──────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+  }
+}

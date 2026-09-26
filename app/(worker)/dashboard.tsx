@@ -1,10 +1,11 @@
 /**
  * ConnectGig — Worker Dashboard (§3.10)
- * Greeting + online toggle, stat badges, today's earnings, active job, new request banner
+ * greeting, online toggle status, today's earnings stats,
+ * active job card with navigation & messaging, and quick incoming nearby request banners.
  */
 
-import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View, Alert, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Star, CheckCircle2, Award, MapPin, Navigation, MessageCircle, TrendingUp, X } from 'lucide-react-native';
@@ -17,9 +18,107 @@ import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { StatusDot } from '../../components/ui/StatusDot';
+import { formatCurrency } from '../../utils/currency';
+import { formatDistance } from '../../utils/distance';
+import { useAuthStore } from '../../store/authStore';
+import { useRequestStore } from '../../store/requestStore';
+import { db, IS_FIREBASE_ENABLED } from '../../services/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export default function WorkerDashboardScreen() {
+  const { user } = useAuthStore();
+  const { activeRequest, subscribeToActiveRequest, unsubscribeFromActiveRequest, acceptRequest } = useRequestStore();
+  
   const [isOnline, setIsOnline] = useState(true);
+  const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
+  const [dismissedRequests, setDismissedRequests] = useState<string[]>([]);
+
+  const userName = user?.displayName || 'Alex Rivers';
+  const userPhoto = user?.profilePhotoUrl;
+
+  // Sync active request listener on mount
+  useEffect(() => {
+    if (user?.uid) {
+      subscribeToActiveRequest(user.uid, 'worker');
+    }
+    return () => {
+      unsubscribeFromActiveRequest();
+    };
+  }, [user?.uid]);
+
+  // Sync searching request broadcasts
+  useEffect(() => {
+    if (IS_FIREBASE_ENABLED) {
+      const q = query(
+        collection(db, 'serviceRequests'),
+        where('status', '==', 'searching')
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ ...doc.data(), requestId: doc.id });
+        });
+        setIncomingRequests(list);
+      });
+      return () => unsubscribe();
+    } else {
+      // Seed a mock request after 3s in mock mode
+      const timer = setTimeout(() => {
+        setIncomingRequests([{
+          requestId: 'mock-incoming-123',
+          category: 'Emergency Pipe Leak',
+          description: 'Kitchen sink pipe burst, water spreading.',
+          estimatedCost: 650.00,
+          clientLocation: { lat: 12.971598, lng: 77.594562, address: 'Indiranagar' },
+          distanceMiles: 0.8,
+        }]);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleNavigate = () => {
+    const lat = activeRequest?.clientLocation?.lat || 37.78825;
+    const lng = activeRequest?.clientLocation?.lng || -122.4324;
+    const label = activeRequest?.category || "Client Location";
+    const url = Platform.select({
+      ios: `maps:0,0?q=${label}@${lat},${lng}`,
+      android: `geo:0,0?q=${lat},${lng}(${label})`,
+      default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+    });
+    if (url) {
+      Linking.openURL(url).catch(() => Alert.alert("Maps Redirect", "Could not launch native map app."));
+    }
+  };
+
+  const handleMessage = () => {
+    const targetId = activeRequest?.requestId || 'mock-request-id';
+    const targetName = activeRequest?.clientId ? 'Client' : 'Sarah Jenkins';
+    router.push({
+      pathname: '/chat/[id]',
+      params: { id: targetId, name: targetName }
+    });
+  };
+
+  const handleAcceptJob = async (reqId: string) => {
+    try {
+      const workerId = user?.uid || 'mock-worker-uid';
+      const workerName = user?.displayName || 'Alex Rivers';
+      await acceptRequest(reqId, workerId, workerName, 4.9);
+      router.replace('/job-tracking');
+    } catch (e) {
+      Alert.alert("Error", "Could not accept request.");
+    }
+  };
+
+  const handleDismissRequest = (reqId: string) => {
+    setDismissedRequests(prev => [...prev, reqId]);
+  };
+
+  // Filter out any dismissed requests
+  const visibleRequests = incomingRequests.filter(
+    (req) => !dismissedRequests.includes(req.requestId)
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -27,10 +126,10 @@ export default function WorkerDashboardScreen() {
         {/* ── Header ──────────────────────────────────── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Avatar name="Alex Rivers" size="md" />
+            <Avatar name={userName} uri={userPhoto} size="md" />
             <View>
               <Text style={styles.greeting}>GOOD MORNING,</Text>
-              <Text style={styles.userName}>Alex Rivers</Text>
+              <Text style={styles.userName}>{userName}</Text>
             </View>
           </View>
           <View style={styles.onlineToggle}>
@@ -77,8 +176,7 @@ export default function WorkerDashboardScreen() {
                 <Text style={styles.earningsChangeText}>12%</Text>
               </View>
             </View>
-            <Text style={styles.earningsAmount}>$145.80</Text>
-            {/* Mini chart placeholder */}
+            <Text style={styles.earningsAmount}>{formatCurrency(1450)}</Text>
             <View style={styles.miniChart}>
               {[30, 50, 35, 65, 45, 70, 55].map((h, i) => (
                 <View key={i} style={[styles.miniBar, { height: h, opacity: i === 6 ? 1 : 0.4 }]} />
@@ -96,28 +194,32 @@ export default function WorkerDashboardScreen() {
 
           <Card variant="default">
             <View style={styles.jobRow}>
-              <Avatar name="Sarah Jenkins" size="md" />
+              <Avatar name={activeRequest ? "Client" : "Sarah Jenkins"} size="md" />
               <View style={styles.jobInfo}>
                 <View style={styles.jobTitleRow}>
-                  <Text style={styles.jobTitle}>Kitchen Sink Repair</Text>
-                  <Text style={styles.jobRate}>$45/hr</Text>
+                  <Text style={styles.jobTitle}>{activeRequest?.category || "Kitchen Sink Repair"}</Text>
+                  <Text style={styles.jobRate}>{formatCurrency(activeRequest?.estimatedCost || 380)}</Text>
                 </View>
                 <View style={styles.jobMeta}>
                   <MapPin size={12} color={Colors.textMuted} strokeWidth={2} />
-                  <Text style={styles.jobMetaText}>Sarah Jenkins</Text>
+                  <Text style={styles.jobMetaText}>
+                    {activeRequest ? "Active Client Request" : "Sarah Jenkins"}
+                  </Text>
                 </View>
                 <View style={styles.jobMeta}>
                   <Navigation size={12} color={Colors.textMuted} strokeWidth={2} />
-                  <Text style={styles.jobMetaText}>2.4 miles away · Downtown</Text>
+                  <Text style={styles.jobMetaText}>
+                    {formatDistance(2.4, 'mi')} away · Downtown
+                  </Text>
                 </View>
               </View>
             </View>
             <View style={styles.jobActions}>
-              <Pressable style={styles.jobActionBtn}>
+              <Pressable onPress={handleNavigate} style={styles.jobActionBtn}>
                 <Navigation size={16} color={Colors.primary} strokeWidth={2} />
                 <Text style={styles.jobActionText}>Navigate</Text>
               </Pressable>
-              <Pressable style={styles.jobActionBtn}>
+              <Pressable onPress={handleMessage} style={styles.jobActionBtn}>
                 <MessageCircle size={16} color={Colors.primary} strokeWidth={2} />
                 <Text style={styles.jobActionText}>Message</Text>
               </Pressable>
@@ -126,33 +228,37 @@ export default function WorkerDashboardScreen() {
         </View>
 
         {/* ── New Request Banner ──────────────────────── */}
-        <View style={styles.section}>
-          <Card variant="outlined" style={styles.requestBanner}>
-            <View style={styles.requestHeader}>
-              <Badge type="aiMatch" />
-              <Text style={styles.requestNearby}>New Request Nearby!</Text>
-              <Text style={styles.requestTimer}>Accept in 24s</Text>
-            </View>
-            <View style={styles.requestBody}>
-              <Avatar name="EP" size="md" />
-              <View style={styles.requestInfo}>
-                <Text style={styles.requestTitle}>Emergency Pipe Leak</Text>
-                <Text style={styles.requestMeta}>0.8 miles away · $60.00 Est</Text>
+        {visibleRequests.length > 0 && (
+          <View style={styles.section}>
+            <Card variant="outlined" style={styles.requestBanner}>
+              <View style={styles.requestHeader}>
+                <Badge type="aiMatch" />
+                <Text style={styles.requestNearby}>New Request Nearby!</Text>
+                <Text style={styles.requestTimer}>Accept in 24s</Text>
               </View>
-            </View>
-            <View style={styles.requestActions}>
-              <Pressable style={styles.dismissBtn}>
-                <X size={20} color={Colors.textMuted} strokeWidth={2} />
-              </Pressable>
-              <Button
-                title="Accept Job"
-                onPress={() => router.push('/job-request/1' as any)}
-                size="md"
-                style={{ flex: 1 }}
-              />
-            </View>
-          </Card>
-        </View>
+              <View style={styles.requestBody}>
+                <Avatar name={visibleRequests[0].category[0]} size="md" />
+                <View style={styles.requestInfo}>
+                  <Text style={styles.requestTitle}>{visibleRequests[0].category}</Text>
+                  <Text style={styles.requestMeta}>
+                    {formatDistance(visibleRequests[0].distanceMiles || 0.8, 'mi')} away · {formatCurrency(visibleRequests[0].estimatedCost)} Est
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.requestActions}>
+                <Pressable onPress={() => handleDismissRequest(visibleRequests[0].requestId)} style={styles.dismissBtn}>
+                  <X size={20} color={Colors.textMuted} strokeWidth={2} />
+                </Pressable>
+                <Button
+                  title="Accept Job"
+                  onPress={() => handleAcceptJob(visibleRequests[0].requestId)}
+                  size="md"
+                  style={{ flex: 1 }}
+                />
+              </View>
+            </Card>
+          </View>
+        )}
 
         <View style={{ height: 100 }} />
       </ScrollView>

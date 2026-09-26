@@ -18,6 +18,7 @@ import {
 import { router } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { Spacing, Radii } from '../../constants/spacing';
+import { formatDistance } from '../../utils/distance';
 import { Typography } from '../../constants/typography';
 import { Button } from '../../components/ui/Button';
 
@@ -29,7 +30,7 @@ const SLIDES = [
     headline: 'Book trusted workers',
     accentWord: 'instantly',
     subtitle: 'ConnectGiG uses AI to find the perfect local professional for your home or business needs in seconds.',
-    chipText: '2.5 miles away',
+    chipText: `${formatDistance(2.5, 'mi')} away`,
     illustration: '🏠',
   },
   {

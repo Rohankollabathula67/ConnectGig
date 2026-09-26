@@ -18,6 +18,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import CustomMapView, { MapMarker } from '../../components/MapView';
+import { formatDistance } from '../../utils/distance';
 import { useLocation } from '../../hooks/useLocation';
 
 const FILTERS = [
@@ -54,7 +55,7 @@ const MOCK_MAP_WORKERS: WorkerDetail[] = [
     jobs: 124,
     category: 'cleaning',
     experience: '5+ Years',
-    distance: '0.8 miles',
+    distance: formatDistance(0.8, 'mi'),
     online: true,
   },
   {
@@ -68,7 +69,7 @@ const MOCK_MAP_WORKERS: WorkerDetail[] = [
     jobs: 89,
     category: 'repair',
     experience: '3 Years',
-    distance: '1.2 miles',
+    distance: formatDistance(1.2, 'mi'),
     online: true,
   },
   {
@@ -82,7 +83,7 @@ const MOCK_MAP_WORKERS: WorkerDetail[] = [
     jobs: 148,
     category: 'plumbing',
     experience: '8+ Years',
-    distance: '0.6 miles',
+    distance: formatDistance(0.6, 'mi'),
     online: false,
   },
 ];
