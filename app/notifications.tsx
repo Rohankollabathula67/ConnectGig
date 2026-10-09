@@ -7,6 +7,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft, Star, ThumbsUp, ThumbsDown } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing } from '../constants/spacing';
@@ -64,12 +65,29 @@ export default function NotificationsScreen() {
     return acc;
   }, {} as Record<string, MockNotification[]>);
 
+  const handleNotificationPress = (type: NotificationType) => {
+    switch (type) {
+      case 'worker_en_route':
+        router.push('/job-tracking');
+        break;
+      case 'booking_confirmed':
+      case 'payment_success':
+        router.push('/(client)/bookings');
+        break;
+      case 'feature_announcement':
+        router.push('/all-services');
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Pressable onPress={() => safeGoBack()} style={styles.backButton}>
               <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
             </Pressable>
             <Text style={styles.title}>Notifications</Text>
@@ -96,6 +114,7 @@ export default function NotificationsScreen() {
                   body={notif.body}
                   time={notif.time}
                   isRead={notif.isRead}
+                  onPress={() => handleNotificationPress(notif.type)}
                 />
               ))}
             </View>

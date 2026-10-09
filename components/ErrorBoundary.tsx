@@ -11,6 +11,7 @@ import { Colors } from '../constants/colors';
 import { Spacing, Radii, Shadows } from '../constants/spacing';
 import { Typography } from '../constants/typography';
 import { Button } from './ui/Button';
+import { router } from 'expo-router';
 
 export interface ErrorBoundaryProps {
   error: Error;
@@ -43,6 +44,14 @@ export function ErrorBoundaryFallback({ error, retry }: ErrorBoundaryProps) {
             onPress={() => retry()}
             size="lg"
             fullWidth
+          />
+          <Button
+            title="Return to Home"
+            variant="secondary"
+            onPress={() => router.replace('/')}
+            size="lg"
+            fullWidth
+            style={{ marginTop: 12 }}
           />
         </View>
       </View>

@@ -22,6 +22,8 @@ import { Colors } from '../../constants/colors';
 import { Radii, Shadows, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useAuthStore } from '../../store/authStore';
+import { IS_FIREBASE_ENABLED } from '../../services/firebase';
+import type { UserRole } from '../../types/user';
 
 type Role = 'client' | 'worker';
 
@@ -54,6 +56,13 @@ export default function LoginScreen() {
       const fullPhone = countryCode + cleaned;
       await sendOTP(fullPhone);
       setOtpSent(true);
+      if (!IS_FIREBASE_ENABLED) {
+        Alert.alert(
+          'Verification Code',
+          `Demo verification code: 123456`,
+          [{ text: 'OK' }]
+        );
+      }
     } catch (_) {
       // error shown from store
     }
@@ -68,12 +77,16 @@ export default function LoginScreen() {
     setLocalError(null);
     try {
       const fullPhone = countryCode + phone.replace(/\D/g, '');
-      await verifyOTP(code, fullPhone);
+      const roleIntent: UserRole = role === 'worker' ? 'provider' : 'client';
+      await verifyOTP(code, fullPhone, roleIntent);
 
       const session = useAuthStore.getState().user;
       if (session?.isNewUser) {
         // New user → registration (unified screen, role carried via store intent)
-        router.replace('/(auth)/register');
+        router.replace({
+          pathname: '/(auth)/register',
+          params: { role: roleIntent },
+        } as any);
       } else {
         // Returning user → home based on stored role
         if (session?.role === 'provider') {
@@ -198,6 +211,14 @@ export default function LoginScreen() {
                 maxLength={6}
                 autoFocus
               />
+              <View style={styles.demoHelperRow}>
+                <Text style={styles.demoHelperText}>
+                  Test code: <Text style={{ fontWeight: '700' }}>123456</Text>
+                </Text>
+                <Pressable onPress={() => setCode('123456')} style={styles.demoFillBtn}>
+                  <Text style={styles.demoFillBtnText}>Auto-fill</Text>
+                </Pressable>
+              </View>
             </View>
           )}
 
@@ -348,6 +369,30 @@ const styles = StyleSheet.create({
     letterSpacing: 12,
     fontSize: 22,
     fontWeight: '700',
+  },
+  demoHelperRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.sm,
+    paddingHorizontal: 4,
+  },
+  demoHelperText: {
+    ...Typography.caption,
+    color: Colors.textMuted,
+  },
+  demoFillBtn: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radii.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  demoFillBtnText: {
+    ...Typography.caption,
+    color: Colors.primary,
+    fontWeight: '600',
   },
   editPhoneBtn: { marginTop: Spacing.md, paddingVertical: 8 },
   editPhoneText: { ...Typography.body2SemiBold, color: Colors.primary },

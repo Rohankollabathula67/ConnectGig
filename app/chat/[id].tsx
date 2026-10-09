@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, FlatList, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeGoBack } from '../../utils/navigation';
 import { ChevronLeft, Send } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { Spacing, Radii, Shadows } from '../../constants/spacing';
@@ -138,7 +139,7 @@ export default function ChatScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => safeGoBack()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
         </Pressable>
         <View style={styles.headerTitleContainer}>

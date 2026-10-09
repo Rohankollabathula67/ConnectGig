@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft, Check, Edit3, Info, Camera } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { storage, IS_FIREBASE_ENABLED } from '../services/firebase';
@@ -150,7 +151,7 @@ export default function ServiceRequestScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => safeGoBack()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Book {category}</Text>

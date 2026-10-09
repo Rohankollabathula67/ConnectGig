@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { Star, ThumbsUp, ThumbsDown, Clock, Shield } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii } from '../constants/spacing';
@@ -99,7 +100,7 @@ export default function SearchingScreen() {
             if (activeRequest?.requestId) {
               await cancelRequest(activeRequest.requestId);
             }
-            router.back();
+            safeGoBack();
           }}
           style={styles.cancelButton}
         >

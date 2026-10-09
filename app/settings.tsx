@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii, Shadows } from '../constants/spacing';
@@ -22,7 +23,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => safeGoBack()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Account Settings</Text>

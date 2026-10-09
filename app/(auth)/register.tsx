@@ -20,7 +20,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { CheckCircle2, Circle } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { Spacing, Radii, Shadows } from '../../constants/spacing';
@@ -51,10 +51,11 @@ type IdType = typeof ID_TYPES[number];
 
 export default function RegisterScreen() {
   const { user, completeRegistration, loading } = useAuthStore();
+  const params = useLocalSearchParams<{ role?: UserRole }>();
 
   // Common fields
   const [name, setName] = useState('');
-  const [role, setRole] = useState<UserRole>('client');
+  const [role, setRole] = useState<UserRole>(params.role || user?.role || 'client');
   const [address, setAddress] = useState('');
   const [idType, setIdType] = useState<IdType>('Aadhaar');
   const [idNumber, setIdNumber] = useState('');

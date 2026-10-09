@@ -5,9 +5,10 @@
  */
 
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View, Alert, Image } from 'react-native';
+import { Pressable, StyleSheet, Text, View, Alert, Image, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft, Phone, MessageCircle, Languages, HelpCircle, Clock } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii } from '../constants/spacing';
@@ -104,13 +105,13 @@ export default function JobTrackingScreen() {
       {/* Top bar */}
       <SafeAreaView edges={['top']} style={styles.topBar}>
         <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => safeGoBack()} style={styles.backBtn}>
             <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
           </Pressable>
           <View style={styles.headerCenter}>
             <Text style={styles.jobStatusLabel}>JOB STATUS</Text>
           </View>
-          <Pressable>
+          <Pressable onPress={() => router.push('/help-support')}>
             <HelpCircle size={22} color={Colors.textMuted} strokeWidth={2} />
           </Pressable>
         </View>
@@ -163,11 +164,25 @@ export default function JobTrackingScreen() {
 
           {/* Action buttons */}
           <View style={styles.actionRow}>
-            <Pressable style={styles.actionBtn}>
+            <Pressable
+              style={styles.actionBtn}
+              onPress={() => Linking.openURL('tel:+919876543210').catch(() => Alert.alert('Call', 'Unable to initiate call.'))}
+            >
               <Phone size={18} color={Colors.primary} strokeWidth={2} />
               <Text style={styles.actionText}>Call</Text>
             </Pressable>
-            <Pressable style={styles.actionBtn}>
+            <Pressable
+              style={styles.actionBtn}
+              onPress={() =>
+                router.push({
+                  pathname: '/chat/[id]',
+                  params: {
+                    id: activeRequest?.requestId || 'mock-request-id',
+                    name: providerName,
+                  },
+                })
+              }
+            >
               <MessageCircle size={18} color={Colors.primary} strokeWidth={2} />
               <Text style={styles.actionText}>Message</Text>
             </Pressable>

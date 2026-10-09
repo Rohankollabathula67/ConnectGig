@@ -7,6 +7,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft, Mail, PhoneCall } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii } from '../constants/spacing';
@@ -24,7 +25,7 @@ export default function HelpSupportScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => safeGoBack()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Help & Support</Text>

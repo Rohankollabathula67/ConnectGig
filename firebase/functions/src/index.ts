@@ -1,18 +1,17 @@
 /**
- * ConnectGig — Cloud Functions Entry Point (§4.0)
- * Exports all triggers and callable functions for deployment.
- */
+* ConnectGig — Cloud Functions Entry Point (§4.0)
+* Exports all triggers and callable functions for deployment.
+*/
 
 // Export Matching functions
-export { 
-  broadcastOnRequestCreation, 
-  expandRadiusQuery, 
-  acceptRequestAtomic 
+export {
+  acceptRequestAtomic, broadcastOnRequestCreation,
+  expandRadiusQuery
 } from './matching';
 
 // Export Notification functions
-export { 
-  onServiceRequestUpdated 
+export {
+  onServiceRequestUpdated
 } from './notifications';
 
 // Export Ratings aggregation functions

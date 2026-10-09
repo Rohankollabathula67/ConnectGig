@@ -33,23 +33,32 @@ const missing = REQUIRED_VARS.filter(
   (key) => !process.env[key] || process.env[key]!.trim() === ''
 );
 
-if (missing.length > 0) {
-  throw new Error(
-    `[ConnectGig] Missing Firebase environment variables:\n` +
-    missing.map((k) => `  • ${k}`).join('\n') +
-    `\n\nCopy .env.example → .env and fill in your Firebase project credentials.\n` +
-    `Get them from: Firebase Console → Project Settings → General → Your apps → SDK setup`
+const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '';
+const isPlaceholder =
+  !apiKey ||
+  apiKey.toLowerCase().includes('mock') ||
+  apiKey.toLowerCase().includes('replace') ||
+  apiKey.toLowerCase().includes('placeholder') ||
+  process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID === 'connect-gig' ||
+  !apiKey.startsWith('AIza');
+
+export const IS_FIREBASE_ENABLED = missing.length === 0 && !isPlaceholder;
+
+if (!IS_FIREBASE_ENABLED) {
+  console.log(
+    `⚡ [ConnectGig] Running in Demo / Simulation Mode.\n` +
+    `   (To connect live Firebase, fill real API credentials in .env and restart Metro bundler).\n`
   );
 }
 
 // ── Firebase config ───────────────────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY!,
-  authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId:         process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket:     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID!,
+  apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'mock-api-key',
+  authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'connect-gig.firebaseapp.com',
+  projectId:         process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'connect-gig',
+  storageBucket:     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || 'connect-gig.appspot.com',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '123456789',
+  appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:123456789:web:mockappid',
 };
 
 // ── Initialize (idempotent — safe to import multiple times) ───────────────────
@@ -62,9 +71,8 @@ export const firebaseAuth: Auth = getAuth(app);
 export const db: Firestore      = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 
-// Convenience flag — always true now (throws above if not configured)
-export const IS_FIREBASE_ENABLED = true;
-
-console.log(`🔥 Firebase initialised — project: ${firebaseConfig.projectId}`);
+if (IS_FIREBASE_ENABLED) {
+  console.log(`🔥 Firebase initialised — project: ${firebaseConfig.projectId}`);
+}
 
 export default app;

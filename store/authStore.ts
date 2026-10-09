@@ -24,7 +24,7 @@ interface AuthState {
   /** Start Firebase auth listener — call once at app root mount */
   initAuthListener: () => () => void;
   sendOTP: (phoneNumber: string) => Promise<void>;
-  verifyOTP: (code: string, phoneNumber: string) => Promise<void>;
+  verifyOTP: (code: string, phoneNumber: string, roleIntent?: UserRole) => Promise<void>;
   completeRegistration: (data: {
     name: string;
     role: UserRole;
@@ -103,7 +103,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   // ── Verify OTP ────────────────────────────────────────────────────────────
-  verifyOTP: async (code: string, phoneNumber: string) => {
+  verifyOTP: async (code: string, phoneNumber: string, roleIntent?: UserRole) => {
     set({ loading: true, error: null });
     const { confirmationResult } = get();
     if (!confirmationResult) {
@@ -112,7 +112,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw new Error(err);
     }
     try {
-      const session = await authService.verifyOTP(confirmationResult, code, phoneNumber);
+      const session = await authService.verifyOTP(confirmationResult, code, phoneNumber, roleIntent);
       set({
         user: session,
         isAuthenticated: true,

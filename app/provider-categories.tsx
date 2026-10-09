@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft, Check } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii, Shadows } from '../constants/spacing';
@@ -51,11 +52,11 @@ export default function ProviderCategoriesScreen() {
         Alert.alert(
           "Specialties Updated",
           "Your service specialties have been updated successfully!",
-          [{ text: "OK", onPress: () => router.back() }]
+          [{ text: "OK", onPress: () => safeGoBack() }]
         );
       } catch (err) {
         setSubmitting(false);
-        Alert.alert("Success", "Specialties saved!", [{ text: "OK", onPress: () => router.back() }]);
+        Alert.alert("Success", "Specialties saved!", [{ text: "OK", onPress: () => safeGoBack() }]);
       }
     }, 1200);
   };
@@ -64,7 +65,7 @@ export default function ProviderCategoriesScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Pressable onPress={() => safeGoBack()} style={styles.backButton}>
           <ChevronLeft size={24} color={Colors.textPrimary} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Service Specialties</Text>

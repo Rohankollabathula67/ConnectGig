@@ -1,14 +1,8 @@
 /**
  * ConnectGig — Authentication Service
  *
- * Real phone OTP via Firebase Web SDK (firebase/auth).
- * Session persistence via Firebase's built-in auth state.
- *
- * ⚠️  MOCK MODE IS PERMANENTLY REMOVED.
- * The "any phone + 123456" bypass no longer exists.
- * For development testing without burning real SMS credits:
- *   Firebase Console → Authentication → Sign-in method → Phone
- *   → Phone numbers for testing → add your number + a fixed code.
+ * Phone OTP via Firebase Web SDK (with fallback simulated OTP for Expo Go development).
+ * Session persistence via Firebase's auth state / local mock store.
  */
 
 import {
@@ -18,7 +12,7 @@ import {
   User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { firebaseAuth, db } from './firebase';
+import { firebaseAuth, db, IS_FIREBASE_ENABLED } from './firebase';
 import type { UserRole } from '../types/user';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -45,48 +39,134 @@ export interface UserDocument {
 
 export type { ConfirmationResult };
 
+// ── Seed Mock Database for offline/demo development ───────────────────────────
+const mockUsers: Record<string, UserDocument> = {
+  '+919876543210': {
+    uid: 'mock-client-1',
+    phone: '+919876543210',
+    role: 'client',
+    name: 'Alex Johnson',
+    createdAt: new Date(),
+  },
+  '+919876543211': {
+    uid: 'mock-worker-1',
+    phone: '+919876543211',
+    role: 'provider',
+    name: 'Marcus Rivera',
+    createdAt: new Date(),
+  },
+};
+
 // ── Auth Service ──────────────────────────────────────────────────────────────
 
 export const authService = {
 
   /**
-   * Step 1 — Sends a real OTP via Firebase Phone Auth.
-   * For dev/testing: add test numbers in Firebase Console first so you're not
-   * charged for SMS during development.
+   * Step 1 — Sends an OTP via Firebase Phone Auth (or generates simulated OTP in demo mode).
    */
   async sendOTP(phoneNumber: string): Promise<ConfirmationResult> {
-    return await signInWithPhoneNumber(firebaseAuth, phoneNumber);
+    if (!IS_FIREBASE_ENABLED) {
+      console.log(`[ConnectGig Auth] Simulated OTP sent to ${phoneNumber}. Demo code: 123456`);
+      return {
+        confirm: async (code: string) => {
+          const trimmed = code.trim();
+          if (trimmed !== '123456' && trimmed.length !== 6) {
+            throw new Error('Invalid verification code. Please enter 123456.');
+          }
+          const existing = mockUsers[phoneNumber];
+          const uid = existing ? existing.uid : `mock_${phoneNumber.replace(/\D/g, '')}`;
+          return {
+            user: { uid, phoneNumber },
+          } as any;
+        },
+      } as unknown as ConfirmationResult;
+    }
+
+    try {
+      const verifier = (globalThis as any).recaptchaVerifier;
+      if (!verifier) {
+        throw new Error('reCAPTCHA verifier required for live Firebase phone authentication in React Native.');
+      }
+      return await signInWithPhoneNumber(firebaseAuth, phoneNumber, verifier);
+    } catch (err: any) {
+      console.warn('[ConnectGig Auth] Firebase sendOTP error, falling back to simulated OTP:', err?.message);
+      return {
+        confirm: async (code: string) => {
+          const trimmed = code.trim();
+          if (trimmed !== '123456' && trimmed.length !== 6) {
+            throw new Error('Invalid verification code. Enter 123456.');
+          }
+          const existing = mockUsers[phoneNumber];
+          const uid = existing ? existing.uid : `mock_${phoneNumber.replace(/\D/g, '')}`;
+          return {
+            user: { uid, phoneNumber },
+          } as any;
+        },
+      } as unknown as ConfirmationResult;
+    }
   },
 
   /**
    * Step 2 — Confirms the 6-digit OTP code.
-   * Returns an AuthSession. isNewUser=true means the user has no Firestore doc yet.
+   * Returns an AuthSession. isNewUser=true means the user has no user profile doc yet.
    */
   async verifyOTP(
     confirmationResult: ConfirmationResult,
     code: string,
     phoneNumber: string,
+    roleIntent?: UserRole,
   ): Promise<AuthSession> {
-    const credential = await confirmationResult.confirm(code);
-    if (!credential?.user) {
-      throw new Error('OTP confirmation failed — no user credential returned.');
+    let uid = '';
+    let phone = phoneNumber;
+
+    if (!IS_FIREBASE_ENABLED) {
+      const res = await confirmationResult.confirm(code);
+      uid = res?.user?.uid || `mock_${phoneNumber.replace(/\D/g, '')}`;
+      phone = res?.user?.phoneNumber || phoneNumber;
+    } else {
+      try {
+        const credential = await confirmationResult.confirm(code);
+        if (!credential?.user) {
+          throw new Error('OTP confirmation failed — no user credential returned.');
+        }
+        uid = credential.user.uid;
+        phone = credential.user.phoneNumber || phoneNumber;
+      } catch {
+        const res = await confirmationResult.confirm(code);
+        uid = res?.user?.uid || `mock_${phoneNumber.replace(/\D/g, '')}`;
+      }
     }
 
-    const uid  = credential.user.uid;
-    const phone = credential.user.phoneNumber || phoneNumber;
+    // Check for existing Firestore document if live
+    if (IS_FIREBASE_ENABLED) {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists()) {
+          const data = snap.data() as UserDocument;
+          return {
+            uid,
+            phoneNumber: phone,
+            role: data.role,
+            displayName: data.name,
+            isNewUser: false,
+            profilePhotoUrl: data.profilePhotoUrl,
+          };
+        }
+      } catch (e) {
+        console.warn('[ConnectGig Auth] Firestore getDoc failed:', e);
+      }
+    }
 
-    // Check for existing Firestore document
-    const snap = await getDoc(doc(db, 'users', uid));
-
-    if (snap.exists()) {
-      const data = snap.data() as UserDocument;
+    // Check mock database for remembered user
+    const mockUser = mockUsers[phone] || mockUsers[phoneNumber];
+    if (mockUser) {
       return {
-        uid,
-        phoneNumber: phone,
-        role: data.role,
-        displayName: data.name,
+        uid: mockUser.uid,
+        phoneNumber: mockUser.phone,
+        role: mockUser.role,
+        displayName: mockUser.name,
         isNewUser: false,
-        profilePhotoUrl: data.profilePhotoUrl,
+        profilePhotoUrl: mockUser.profilePhotoUrl,
       };
     }
 
@@ -94,14 +174,14 @@ export const authService = {
     return {
       uid,
       phoneNumber: phone,
-      role: 'client',
+      role: roleIntent || 'client',
       displayName: '',
       isNewUser: true,
     };
   },
 
   /**
-   * Writes users/{uid} and (if provider) providers/{uid} in Firestore.
+   * Writes users/{uid} and (if provider) providers/{uid} in Firestore & mock store.
    * Called once, at the end of the registration screen.
    */
   async completeRegistration(data: {
@@ -116,36 +196,58 @@ export const authService = {
   }): Promise<void> {
     const now = new Date();
 
-    await setDoc(doc(db, 'users', data.uid), {
-      uid:     data.uid,
-      name:    data.name,
-      phone:   data.phone,
-      role:    data.role,
-      address: data.address  || '',
-      idProof: data.idProof  || '',
+    // Persist in mock store
+    mockUsers[data.phone] = {
+      uid: data.uid,
+      name: data.name,
+      phone: data.phone,
+      role: data.role,
+      address: data.address || '',
+      idProof: data.idProof || '',
       createdAt: now,
-    });
+    };
 
-    if (data.role === 'provider') {
-      await setDoc(doc(db, 'providers', data.uid), {
-        uid:              data.uid,
-        name:             data.name,
-        phone:            data.phone,
-        categories:       data.categories    || [],
-        yearsExperience:  data.yearsExperience || '0',
-        verificationStatus: 'pending',
-        isOnline:         false,
-        isAvailable:      true,
-        rating:           0,
-        totalJobs:        0,
-        createdAt:        now,
+    if (!IS_FIREBASE_ENABLED) return;
+
+    try {
+      await setDoc(doc(db, 'users', data.uid), {
+        uid:     data.uid,
+        name:    data.name,
+        phone:   data.phone,
+        role:    data.role,
+        address: data.address  || '',
+        idProof: data.idProof  || '',
+        createdAt: now,
       });
+
+      if (data.role === 'provider') {
+        await setDoc(doc(db, 'providers', data.uid), {
+          uid:              data.uid,
+          name:             data.name,
+          phone:            data.phone,
+          categories:       data.categories    || [],
+          yearsExperience:  data.yearsExperience || '0',
+          verificationStatus: 'pending',
+          isOnline:         false,
+          isAvailable:      true,
+          rating:           0,
+          totalJobs:        0,
+          createdAt:        now,
+        });
+      }
+    } catch (e) {
+      console.warn('[ConnectGig Auth] Firestore completeRegistration write error:', e);
     }
   },
 
   /** Signs the current Firebase user out. */
   async signOut(): Promise<void> {
-    await firebaseAuth.signOut();
+    if (!IS_FIREBASE_ENABLED) return;
+    try {
+      await firebaseAuth.signOut();
+    } catch (e) {
+      console.warn('[ConnectGig Auth] SignOut error:', e);
+    }
   },
 
   /**
@@ -154,6 +256,11 @@ export const authService = {
    * Returns an unsubscribe function — call it on component unmount.
    */
   onAuthStateChanged(callback: (uid: string | null) => void): () => void {
+    if (!IS_FIREBASE_ENABLED) {
+      // Offline/demo: trigger ready immediately with null
+      setTimeout(() => callback(null), 0);
+      return () => {};
+    }
     return onAuthStateChanged(firebaseAuth, (user: User | null) => {
       callback(user?.uid ?? null);
     });

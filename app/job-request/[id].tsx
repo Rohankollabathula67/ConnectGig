@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeGoBack } from '../../utils/navigation';
 import { MapPin, Clock, Navigation } from 'lucide-react-native';
 import { Colors } from '../../constants/colors';
 import { Spacing, Radii, Shadows } from '../../constants/spacing';
@@ -34,7 +35,7 @@ export default function JobRequestScreen() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          router.back();
+          safeGoBack('/(worker)/dashboard');
           return 0;
         }
         return prev - 1;

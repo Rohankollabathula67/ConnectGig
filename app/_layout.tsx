@@ -8,9 +8,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { BackHandler, Platform } from 'react-native';
 import { useNotifications } from '../hooks/useNotifications';
 import { ErrorBoundaryFallback } from '../components/ErrorBoundary';
 import { useAuthStore } from '../store/authStore';
+import { safeGoBack } from '../utils/navigation';
 
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
   return <ErrorBoundaryFallback error={error} retry={retry} />;
@@ -29,6 +31,19 @@ export default function RootLayout() {
     return () => unsubscribe();
   }, []);
 
+  // Safe Android hardware back button handler
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      safeGoBack();
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, []);
+
   useEffect(() => {
     // Hide native splash after a short delay (our custom splash takes over)
     const timer = setTimeout(() => {
@@ -44,6 +59,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(client)" />
         <Stack.Screen name="(worker)" />
+        <Stack.Screen name="+not-found" options={{ title: 'Oops!' }} />
         <Stack.Screen
           name="service-request"
           options={{ animation: 'slide_from_right' }}
