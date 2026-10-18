@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   track: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   fallback: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     opacity: 0,
   },
 });

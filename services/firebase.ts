@@ -17,7 +17,12 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
-import { getAuth, Auth } from 'firebase/auth';
+import {
+  initializeAuth,
+  getAuth,
+  Auth,
+  inMemoryPersistence,
+} from 'firebase/auth';
 import { getFunctions, Functions } from 'firebase/functions';
 
 
@@ -69,7 +74,17 @@ const app: FirebaseApp = getApps().length === 0
   : getApps()[0];
 
 // ── Service instances ─────────────────────────────────────────────────────────
-export const firebaseAuth: Auth = getAuth(app);
+// Firebase Web SDK v12 does not export getReactNativePersistence. Use
+// initializeAuth with inMemoryPersistence to silence the AsyncStorage warning.
+// For true session persistence on device, migrate to @react-native-firebase.
+let firebaseAuth: Auth;
+try {
+  firebaseAuth = initializeAuth(app, { persistence: inMemoryPersistence });
+} catch {
+  // initializeAuth throws on hot reload if Auth is already initialized
+  firebaseAuth = getAuth(app);
+}
+export { firebaseAuth };
 export const db: Firestore      = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 export const functions: Functions = getFunctions(app);

@@ -19,7 +19,7 @@ A gig marketplace mobile app built with React Native and Expo.
 ## Tech Stack
 
 - **React Native** 0.81
-- **Expo** SDK 54
+- **Expo** SDK 57
 - **Expo Router** (file-based routing)
 - **TypeScript**
 

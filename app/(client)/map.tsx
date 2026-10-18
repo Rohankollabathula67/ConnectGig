@@ -157,7 +157,7 @@ export default function NearbyMapScreen() {
           markers={mapMarkers}
           origin={location || undefined}
           onMarkerPress={handleMarkerPress}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </View>
 

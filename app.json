@@ -4,10 +4,9 @@
     "slug": "connect-gig",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/ima nmp;̣ges/icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "connectgig",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rohankollabathula.connectgig",
@@ -23,7 +22,6 @@
         "backgroundColor": "#6C5CE7",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
@@ -47,9 +45,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#08080F"
         }
-      ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

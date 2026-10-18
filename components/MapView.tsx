@@ -117,7 +117,7 @@ export default function CustomMapView({
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         customMapStyle={MAP_STYLE}
         initialRegion={getInitialRegion()}
         scrollEnabled={interactive}

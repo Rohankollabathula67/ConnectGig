@@ -133,7 +133,7 @@ export default function JobTrackingScreen() {
           origin={userLocation || undefined}
           destination={workerLocation || undefined}
           showRoute={true}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </View>
 
