@@ -179,6 +179,7 @@ export default function JobTrackingScreen() {
                   params: {
                     id: activeRequest?.requestId || 'mock-request-id',
                     name: providerName,
+                    providerId: activeRequest?.acceptedProviderId || 'mock-worker-uid',
                   },
                 })
               }

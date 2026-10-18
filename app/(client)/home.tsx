@@ -201,7 +201,7 @@ export default function ClientHomeScreen() {
 
             {filteredCategories.length === 0 && filteredProviders.length === 0 && (
               <View style={styles.noResults}>
-                <Text style={styles.noResultsText}>No services or providers found matching "{searchQuery}"</Text>
+                <Text style={styles.noResultsText}>No services or providers found matching &quot;{searchQuery}&quot;</Text>
               </View>
             )}
           </View>

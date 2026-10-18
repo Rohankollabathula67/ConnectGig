@@ -137,7 +137,7 @@ export default function LoginScreen() {
               style={[styles.roleOption, role === 'client' && styles.roleOptionActive]}
             >
               <Text style={[styles.roleText, role === 'client' && styles.roleTextActive]}>
-                I'm a Client
+                I&apos;m a Client
               </Text>
             </Pressable>
             <Pressable
@@ -146,7 +146,7 @@ export default function LoginScreen() {
               style={[styles.roleOption, role === 'worker' && styles.roleOptionActive]}
             >
               <Text style={[styles.roleText, role === 'worker' && styles.roleTextActive]}>
-                I'm a Worker
+                I&apos;m a Worker
               </Text>
             </Pressable>
           </View>
@@ -260,7 +260,7 @@ export default function LoginScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By continuing, you agree to ConnectGiG's{' '}
+            By continuing, you agree to ConnectGiG&apos;s{' '}
             <Text style={styles.footerLink}>Terms of Service</Text>
             {' '}and{' '}
             <Text style={styles.footerLink}>Privacy Policy</Text>

@@ -92,11 +92,12 @@ export default function WorkerDashboardScreen() {
   };
 
   const handleMessage = () => {
-    const targetId = activeRequest?.requestId || 'mock-request-id';
+    const targetId = activeRequest?.requestId || 'conv_1';
     const targetName = activeRequest?.clientId ? 'Client' : 'Sarah Jenkins';
+    const recipientUid = activeRequest?.clientId || 'mock-client-uid';
     router.push({
       pathname: '/chat/[id]',
-      params: { id: targetId, name: targetName }
+      params: { id: targetId, name: targetName, providerId: recipientUid }
     });
   };
 
@@ -170,7 +171,7 @@ export default function WorkerDashboardScreen() {
             style={styles.earningsCard}
           >
             <View style={styles.earningsHeader}>
-              <Text style={styles.earningsLabel}>Today's Earnings</Text>
+              <Text style={styles.earningsLabel}>Today&apos;s Earnings</Text>
               <View style={styles.earningsChange}>
                 <TrendingUp size={12} color={Colors.successLight} />
                 <Text style={styles.earningsChangeText}>12%</Text>
