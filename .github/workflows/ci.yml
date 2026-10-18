@@ -1,0 +1,37 @@
+name: ConnectGig CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  validate:
+    name: Lint & TypeCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Client Dependencies
+        run: npm ci
+
+      - name: TypeCheck Client App (TypeScript)
+        run: npx tsc --noEmit
+
+      - name: Lint Codebase
+        run: npm run lint
+
+      - name: Install & Build Cloud Functions
+        run: |
+          cd firebase/functions
+          npm ci
+          npm run build

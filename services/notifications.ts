@@ -29,10 +29,12 @@ export const pushNotificationsService = {
       return null;
     }
 
-    // Verify physical device status
-    const isDevice = Constants.appOwnership !== 'expo';
-    if (!isDevice) {
-      console.log('[Notifications] Must use physical device for push notifications.');
+    // Verify physical device / dev build status
+    // Remote notifications were removed from Expo Go in SDK 53+
+    const isExpoGo = Constants.appOwnership === 'expo';
+    if (isExpoGo) {
+      console.log('[Notifications] Running in Expo Go — remote notifications require a development build. Using development token.');
+      return 'ExponentPushToken[expo-go-dev-mock-token]';
     }
 
     try {

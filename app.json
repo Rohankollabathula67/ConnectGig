@@ -4,13 +4,18 @@
     "slug": "connect-gig",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/ima nmp;̣ges/icon.png",
     "scheme": "connectgig",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.rohankollabathula.connectgig"
+      "bundleIdentifier": "com.rohankollabathula.connectgig",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "ConnectGig needs your location to match you with nearby service professionals and provide live tracking.",
+        "NSCameraUsageDescription": "ConnectGig needs camera access so you can take and attach photos of the issue to your service request.",
+        "NSPhotoLibraryUsageDescription": "ConnectGig needs access to your photos so you can attach images to your profile or service requests."
+      }
     },
     "android": {
       "package": "com.rohankollabathula.connectgig",
@@ -19,7 +24,14 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "POST_NOTIFICATIONS",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "output": "static",

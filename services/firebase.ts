@@ -18,6 +18,8 @@ import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 import { getAuth, Auth } from 'firebase/auth';
+import { getFunctions, Functions } from 'firebase/functions';
+
 
 // ── Validate all required env vars are present ────────────────────────────────
 const REQUIRED_VARS = [
@@ -70,6 +72,8 @@ const app: FirebaseApp = getApps().length === 0
 export const firebaseAuth: Auth = getAuth(app);
 export const db: Firestore      = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
+export const functions: Functions = getFunctions(app);
+
 
 if (IS_FIREBASE_ENABLED) {
   console.log(`🔥 Firebase initialised — project: ${firebaseConfig.projectId}`);

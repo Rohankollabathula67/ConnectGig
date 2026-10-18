@@ -6,9 +6,9 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AlertCircle, RefreshCw } from 'lucide-react-native';
+import { AlertCircle } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
-import { Spacing, Radii, Shadows } from '../constants/spacing';
+import { Spacing, Radii } from '../constants/spacing';
 import { Typography } from '../constants/typography';
 import { Button } from './ui/Button';
 import { router } from 'expo-router';

@@ -16,7 +16,6 @@ import { Colors } from '../constants/colors';
 import { Spacing, Radii, Shadows } from '../constants/spacing';
 import { Typography } from '../constants/typography';
 import { Button } from '../components/ui/Button';
-import { Card } from '../components/ui/Card';
 import { useAuthStore } from '../store/authStore';
 import { useRequestStore } from '../store/requestStore';
 import { useLocationStore } from '../store/locationStore';
@@ -261,7 +260,7 @@ export default function ServiceRequestScreen() {
         <View style={styles.tipBanner}>
           <Info size={16} color={Colors.primary} strokeWidth={2} />
           <Text style={styles.tipText}>
-            Pro-tip: Clear descriptions help experts provide better quotes. We'll match you with available pros in your area immediately.
+            Pro-tip: Clear descriptions help experts provide better quotes. We&apos;ll match you with available pros in your area immediately.
           </Text>
         </View>
       </ScrollView>
@@ -281,7 +280,7 @@ export default function ServiceRequestScreen() {
         <Button
           title="Confirm Request  →"
           onPress={handleConfirm}
-          loading={loading}
+          loading={loading || uploadingPhoto}
           fullWidth
           size="lg"
         />

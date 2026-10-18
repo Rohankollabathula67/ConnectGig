@@ -34,6 +34,7 @@ interface AuthState {
     yearsExperience?: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   updateProfile: (profile: Partial<AuthSession>) => void;
 }
 
@@ -155,6 +156,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ user: null, isAuthenticated: false, loading: false, error: null, confirmationResult: null });
     } catch (e: any) {
       set({ loading: false, error: e?.message || 'Logout failed.' });
+    }
+  },
+
+  // ── Delete Account (App Store 5.1.1 Compliance) ───────────────────────────
+  deleteAccount: async () => {
+    set({ loading: true });
+    const { user } = get();
+    try {
+      if (user?.uid) {
+        await authService.deleteAccount(user.uid, user.phoneNumber);
+      }
+      set({ user: null, isAuthenticated: false, loading: false, error: null, confirmationResult: null });
+    } catch (e: any) {
+      set({ loading: false, error: e?.message || 'Failed to delete account.' });
+      throw e;
     }
   },
 

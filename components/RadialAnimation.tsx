@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -38,6 +38,62 @@ const DEFAULT_WORKERS: OrbitingWorker[] = [
   { id: '3', initials: 'D', angle: 290, radius: 100, online: false },
 ];
 
+function PulsingRing({
+  pulseValue,
+  size,
+  radius,
+}: {
+  pulseValue: SharedValue<number>;
+  size: number;
+  radius: number;
+}) {
+  const ringStyle = useAnimatedStyle(() => {
+    const scale = interpolate(pulseValue.value, [0, 1], [0.4, 1.2]);
+    const opacity = interpolate(pulseValue.value, [0, 0.8, 1], [0.8, 0.4, 0]);
+    return {
+      transform: [{ scale }],
+      opacity,
+    };
+  });
+
+  return (
+    <Animated.View
+      style={[
+        styles.ring,
+        { width: size, height: size, borderRadius: radius },
+        ringStyle,
+      ]}
+    />
+  );
+}
+
+function OrbitingWorkerAvatar({
+  worker,
+  orbitRotation,
+}: {
+  worker: OrbitingWorker;
+  orbitRotation: SharedValue<number>;
+}) {
+  const rad = (worker.angle * Math.PI) / 180;
+  const x = Math.cos(rad) * worker.radius;
+  const y = Math.sin(rad) * worker.radius;
+
+  const animatedWorkerStyle = useAnimatedStyle(() => {
+    const rotationRad = (orbitRotation.value * Math.PI) / 180;
+    const rx = x * Math.cos(rotationRad) - y * Math.sin(rotationRad);
+    const ry = x * Math.sin(rotationRad) + y * Math.cos(rotationRad);
+    return {
+      transform: [{ translateX: rx }, { translateY: ry }],
+    };
+  });
+
+  return (
+    <Animated.View style={[styles.orbitingWrapper, animatedWorkerStyle]}>
+      <Avatar name={worker.initials} size="sm" showOnline={worker.online} />
+    </Animated.View>
+  );
+}
+
 export function RadialAnimation({
   workers = DEFAULT_WORKERS,
   pulseRadius = 140,
@@ -46,7 +102,7 @@ export function RadialAnimation({
   const pulse1 = useSharedValue(0);
   const pulse2 = useSharedValue(0);
   const pulse3 = useSharedValue(0);
-  
+
   // Orbit rotation shared value
   const orbitRotation = useSharedValue(0);
 
@@ -80,55 +136,35 @@ export function RadialAnimation({
       -1,
       false
     );
-  }, []);
-
-  // Animated styles for concentric rings
-  const makeRingStyle = (pulseValue: SharedValue<number>) => {
-    return useAnimatedStyle(() => {
-      const scale = interpolate(pulseValue.value, [0, 1], [0.4, 1.2]);
-      const opacity = interpolate(pulseValue.value, [0, 0.8, 1], [0.8, 0.4, 0]);
-      return {
-        transform: [{ scale }],
-        opacity,
-      };
-    });
-  };
-
-  const ringStyle1 = makeRingStyle(pulse1);
-  const ringStyle2 = makeRingStyle(pulse2);
-  const ringStyle3 = makeRingStyle(pulse3);
+  }, [orbitRotation, pulse1, pulse2, pulse3]);
 
   return (
     <View style={styles.container}>
       {/* Concentric Pulsing Rings */}
-      <Animated.View style={[styles.ring, { width: pulseRadius * 2, height: pulseRadius * 2, borderRadius: pulseRadius }, ringStyle1]} />
-      <Animated.View style={[styles.ring, { width: pulseRadius * 1.5, height: pulseRadius * 1.5, borderRadius: pulseRadius * 0.75 }, ringStyle2]} />
-      <Animated.View style={[styles.ring, { width: pulseRadius, height: pulseRadius, borderRadius: pulseRadius * 0.5 }, ringStyle3]} />
+      <PulsingRing
+        pulseValue={pulse1}
+        size={pulseRadius * 2}
+        radius={pulseRadius}
+      />
+      <PulsingRing
+        pulseValue={pulse2}
+        size={pulseRadius * 1.5}
+        radius={pulseRadius * 0.75}
+      />
+      <PulsingRing
+        pulseValue={pulse3}
+        size={pulseRadius}
+        radius={pulseRadius * 0.5}
+      />
 
       {/* Orbiting Workers */}
-      {workers.map((worker) => {
-        // Convert polar coordinates to cartesian offset
-        const rad = (worker.angle * Math.PI) / 180;
-        const x = Math.cos(rad) * worker.radius;
-        const y = Math.sin(rad) * worker.radius;
-
-        // Custom animated style to apply orbit rotation
-        const animatedWorkerStyle = useAnimatedStyle(() => {
-          const rotationRad = (orbitRotation.value * Math.PI) / 180;
-          // Rotate coordinates dynamically
-          const rx = x * Math.cos(rotationRad) - y * Math.sin(rotationRad);
-          const ry = x * Math.sin(rotationRad) + y * Math.cos(rotationRad);
-          return {
-            transform: [{ translateX: rx }, { translateY: ry }],
-          };
-        });
-
-        return (
-          <Animated.View key={worker.id} style={[styles.orbitingWrapper, animatedWorkerStyle]}>
-            <Avatar name={worker.initials} size="sm" showOnline={worker.online} />
-          </Animated.View>
-        );
-      })}
+      {workers.map((worker) => (
+        <OrbitingWorkerAvatar
+          key={worker.id}
+          worker={worker}
+          orbitRotation={orbitRotation}
+        />
+      ))}
 
       {/* Center Anchor Pin */}
       <View style={styles.centerPin}>

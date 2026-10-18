@@ -11,7 +11,7 @@ import {
   onAuthStateChanged,
   User,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { firebaseAuth, db, IS_FIREBASE_ENABLED } from './firebase';
 import type { UserRole } from '../types/user';
 
@@ -247,6 +247,33 @@ export const authService = {
       await firebaseAuth.signOut();
     } catch (e) {
       console.warn('[ConnectGig Auth] SignOut error:', e);
+    }
+  },
+
+  /**
+   * Permanently deletes user account data and Firebase Auth identity.
+   * Required for Apple App Store Guideline 5.1.1(v) compliance.
+   */
+  async deleteAccount(uid: string, phone?: string): Promise<void> {
+    if (phone && mockUsers[phone]) {
+      delete mockUsers[phone];
+    }
+
+    if (IS_FIREBASE_ENABLED) {
+      try {
+        await deleteDoc(doc(db, 'users', uid));
+        await deleteDoc(doc(db, 'providers', uid));
+      } catch (e) {
+        console.warn('[ConnectGig Auth] Firestore doc delete warning:', e);
+      }
+
+      try {
+        if (firebaseAuth.currentUser) {
+          await firebaseAuth.currentUser.delete();
+        }
+      } catch (e) {
+        console.warn('[ConnectGig Auth] Auth deleteUser warning:', e);
+      }
     }
   },
 

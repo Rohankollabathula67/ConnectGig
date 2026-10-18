@@ -23,3 +23,10 @@ export {
 export {
   buildWorkerDailyAnalytics
 } from './analytics';
+
+// Export Payments functions
+export {
+  createPaymentOrder,
+  verifyPaymentSignature
+} from './payments';
+

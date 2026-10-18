@@ -4,20 +4,49 @@
  */
 
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { safeGoBack } from '../utils/navigation';
-import { ChevronLeft } from 'lucide-react-native';
+import { ChevronLeft, Trash2 } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
-import { Spacing, Radii, Shadows } from '../constants/spacing';
+import { Spacing, Radii } from '../constants/spacing';
 import { Typography } from '../constants/typography';
 import { Card } from '../components/ui/Card';
+import { useAuthStore } from '../store/authStore';
 
 export default function SettingsScreen() {
   const [pushEnabled, setPushEnabled] = useState(true);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [smsEnabled, setSmsEnabled] = useState(true);
+
+  const { deleteAccount } = useAuthStore();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account and all associated profile data? This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Permanently',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteAccount();
+              router.replace('/(auth)/login');
+            } catch (err: any) {
+              Alert.alert('Error', err?.message || 'Failed to delete account. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -93,6 +122,30 @@ export default function SettingsScreen() {
             <Text style={styles.prefLink}>Link Account</Text>
           </View>
         </Card>
+
+        {/* Account & Data Management (Apple Guideline 5.1.1) */}
+        <Text style={[styles.sectionHeader, { color: Colors.error }]}>Account Actions</Text>
+        <Card variant="elevated" style={styles.card} padding="lg">
+          <Pressable
+            style={styles.deleteRow}
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+          >
+            <View style={styles.deleteInfo}>
+              <View style={styles.deleteIconBox}>
+                <Trash2 size={18} color={Colors.error} />
+              </View>
+              <View>
+                <Text style={styles.deleteLabel}>
+                  {deleting ? 'Deleting Account...' : 'Delete Account'}
+                </Text>
+                <Text style={styles.deleteDesc}>
+                  Permanently remove your account and all associated data
+                </Text>
+              </View>
+            </View>
+          </Pressable>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -121,4 +174,16 @@ const styles = StyleSheet.create({
   prefValue: { ...Typography.body2, color: Colors.textSecondary },
   prefLink: { ...Typography.body2SemiBold, color: Colors.primary },
   divider: { height: 1, backgroundColor: Colors.divider, marginVertical: Spacing.xs },
+  deleteRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.xs },
+  deleteInfo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flex: 1 },
+  deleteIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: Radii.sm,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteLabel: { ...Typography.body2SemiBold, color: Colors.error },
+  deleteDesc: { ...Typography.caption, color: Colors.textMuted, marginTop: 2, maxWidth: '90%' },
 });
