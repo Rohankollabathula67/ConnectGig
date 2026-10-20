@@ -20,6 +20,8 @@ import { Button } from '../../components/ui/Button';
 import CustomMapView, { MapMarker } from '../../components/MapView';
 import { formatDistance } from '../../utils/distance';
 import { useLocation } from '../../hooks/useLocation';
+import { useWorkers, WorkerCardData } from '../../hooks/useWorkers';
+import { formatCurrency } from '../../utils/currency';
 
 const FILTERS = [
   { id: 'all', label: 'All Workers' },
@@ -91,38 +93,54 @@ const MOCK_MAP_WORKERS: WorkerDetail[] = [
 export default function NearbyMapScreen() {
   const [activeFilter, setActiveFilter] = useState('all');
   const { location } = useLocation();
-  const [selectedWorker, setSelectedWorker] = useState<WorkerDetail>(MOCK_MAP_WORKERS[0]);
 
-  // Compute absolute coordinates based on user GPS location
+  // Query live workers from Firestore
+  const { workers: liveWorkers } = useWorkers({
+    onlineOnly: false,
+    userLocation: location || undefined,
+    maxResults: 15,
+  });
+
+  // Base coordinates
   const baseLat = location?.latitude ?? 37.78825;
   const baseLng = location?.longitude ?? -122.4324;
 
-  const workers = MOCK_MAP_WORKERS.map((w) => ({
-    ...w,
-    latitude: baseLat + w.latitudeOffset,
-    longitude: baseLng + w.longitudeOffset,
+  const workers: WorkerDetail[] = liveWorkers.map((w, i) => ({
+    id: w.uid,
+    name: w.name,
+    latitudeOffset: (i % 2 === 0 ? 0.003 : -0.004) * (i + 1) * 0.4,
+    longitudeOffset: (i % 2 === 0 ? 0.002 : -0.003) * (i + 1) * 0.4,
+    initials: w.name.split(' ').map((n) => n[0]).join('').slice(0, 2),
+    rate: w.hourlyRate || 300,
+    rating: w.rating || 4.8,
+    jobs: w.isTopPro ? 88 : 24,
+    category: w.subtitle.toLowerCase(),
+    experience: w.isTopPro ? '6+ Years' : '3+ Years',
+    distance: w.distance !== '—' ? w.distance : `${(0.8 + i * 0.4).toFixed(1)} km`,
+    online: w.isOnline,
   }));
+
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
 
   // Filter markers based on chip group
   const filteredWorkers = workers.filter(
-    (w) => activeFilter === 'all' || w.category === activeFilter
+    (w) => activeFilter === 'all' || w.category.includes(activeFilter.toLowerCase())
   );
+
+  const selectedWorker = workers.find((w) => w.id === selectedWorkerId) || workers[0] || MOCK_MAP_WORKERS[0];
 
   // Map to MapMarker prop structure
   const mapMarkers: MapMarker[] = filteredWorkers.map((w) => ({
     id: w.id,
-    latitude: w.latitude,
-    longitude: w.longitude,
+    latitude: baseLat + w.latitudeOffset,
+    longitude: baseLng + w.longitudeOffset,
     title: w.name,
     initials: w.initials,
     online: w.online,
   }));
 
   const handleMarkerPress = (marker: MapMarker) => {
-    const worker = workers.find((w) => w.id === marker.id);
-    if (worker) {
-      setSelectedWorker(worker);
-    }
+    setSelectedWorkerId(marker.id);
   };
 
   return (
@@ -170,7 +188,7 @@ export default function NearbyMapScreen() {
               <View style={styles.workerNameRow}>
                 <Text style={styles.workerName}>{selectedWorker.name}</Text>
                 <Text style={styles.workerRate}>
-                  ${selectedWorker.rate}
+                  {formatCurrency(selectedWorker.rate)}
                   <Text style={styles.rateUnit}>/hr</Text>
                 </Text>
               </View>

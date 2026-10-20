@@ -33,6 +33,8 @@ interface UseWorkersOptions {
   maxResults?: number;
   /** Only return online providers. Default true. */
   onlineOnly?: boolean;
+  /** Optional user location for distance calculation */
+  userLocation?: { lat: number; lng: number } | { latitude: number; longitude: number };
 }
 
 // ── Curated mock data used in Demo / Simulation Mode ──────────────────────────
@@ -100,45 +102,64 @@ const MOCK_WORKERS: WorkerCardData[] = [
 ];
 
 /** Convert Firestore Provider doc → WorkerCardData for display */
-function providerToCardData(provider: Provider & { uid: string }, userLocation?: { lat: number; lng: number }): WorkerCardData {
+function providerToCardData(
+  provider: any,
+  userLocation?: { lat: number; lng: number } | { latitude: number; longitude: number }
+): WorkerCardData {
   // Rough distance calc (Haversine approximation in km)
   let distance = '—';
-  if (userLocation && provider.currentLocation) {
-    const R = 6371;
-    const dLat = ((provider.currentLocation.lat - userLocation.lat) * Math.PI) / 180;
-    const dLon = ((provider.currentLocation.lng - userLocation.lng) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((userLocation.lat * Math.PI) / 180) *
-        Math.cos((provider.currentLocation.lat * Math.PI) / 180) *
-        Math.sin(dLon / 2) ** 2;
-    const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    distance = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+  const uLat = userLocation ? ('lat' in userLocation ? userLocation.lat : userLocation.latitude) : undefined;
+  const uLng = userLocation ? ('lng' in userLocation ? userLocation.lng : userLocation.longitude) : undefined;
+
+  if (uLat !== undefined && uLng !== undefined && provider.currentLocation) {
+    const pLat = provider.currentLocation.lat ?? provider.currentLocation.latitude;
+    const pLng = provider.currentLocation.lng ?? provider.currentLocation.longitude;
+    if (pLat !== undefined && pLng !== undefined) {
+      const R = 6371;
+      const dLat = ((pLat - uLat) * Math.PI) / 180;
+      const dLon = ((pLng - uLng) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((uLat * Math.PI) / 180) *
+          Math.cos((pLat * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+      const km = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      distance = km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`;
+    }
   }
 
-  const primaryCategory = provider.categories?.[0] ?? 'Service Provider';
+  const cats: string[] = provider.categories || provider.skills || [];
+  const primaryCategory = cats[0] ?? provider.subtitle ?? 'Service Provider';
+  const rating = Number(provider.avgRating ?? provider.rating ?? 4.8);
+  const jobs = Number(provider.totalJobsCompleted ?? provider.totalJobs ?? 15);
+  const hourlyRate = Number(provider.hourlyRate ?? 300);
+  const isOnline = provider.isOnline !== undefined ? Boolean(provider.isOnline) : true;
+  const isVerified = provider.verificationStatus === 'verified' || provider.isVerified === true;
 
   return {
-    uid: provider.uid,
-    name: provider.name ?? 'Provider',
+    uid: provider.uid || provider.id || `w_${Math.random()}`,
+    name: provider.name ?? 'Service Provider',
     subtitle: primaryCategory,
     photoUrl: provider.profilePhotoUrl,
-    rating: provider.avgRating ?? 0,
+    rating,
     distance,
-    hourlyRate: provider.hourlyRate ?? 0,
-    isVerified: provider.verificationStatus === 'verified',
-    isTopPro: (provider.totalJobsCompleted ?? 0) >= 50,
-    isOnline: provider.isOnline,
-    categories: provider.categories ?? [],
+    hourlyRate,
+    isVerified,
+    isTopPro: jobs >= 50,
+    isOnline,
+    categories: cats,
   };
 }
 
 export function useWorkers(options: UseWorkersOptions = {}) {
-  const { category, maxResults = 10, onlineOnly = true } = options;
+  const { category, maxResults = 10, onlineOnly = true, userLocation } = options;
 
   const [workers, setWorkers] = useState<WorkerCardData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const uLat = userLocation ? ('lat' in userLocation ? userLocation.lat : userLocation.latitude) : undefined;
+  const uLng = userLocation ? ('lng' in userLocation ? userLocation.lng : userLocation.longitude) : undefined;
 
   useEffect(() => {
     // ── Demo / Simulation Mode ─────────────────────────────────────────────
@@ -146,7 +167,8 @@ export function useWorkers(options: UseWorkersOptions = {}) {
       let results = [...MOCK_WORKERS];
       if (category) {
         results = results.filter((w) =>
-          w.categories.some((c) => c.toLowerCase().includes(category.toLowerCase()))
+          w.categories.some((c) => c.toLowerCase().includes(category.toLowerCase())) ||
+          w.subtitle.toLowerCase().includes(category.toLowerCase())
         );
       }
       if (onlineOnly) {
@@ -160,30 +182,43 @@ export function useWorkers(options: UseWorkersOptions = {}) {
     // ── Live Firestore Query ───────────────────────────────────────────────
     setLoading(true);
     try {
-      const constraints: any[] = [
-        where('isAvailable', '==', true),
-        orderBy('avgRating', 'desc'),
-        limit(maxResults),
-      ];
-
-      if (onlineOnly) constraints.unshift(where('isOnline', '==', true));
-      if (category) constraints.unshift(where('categories', 'array-contains', category));
-
-      const q = query(collection(db, 'providers'), ...constraints);
+      // Query providers collection directly without requiring composite indexes
+      const q = query(collection(db, 'providers'), limit(50));
 
       const unsubscribe = onSnapshot(
         q,
         (snapshot) => {
-          const docs = snapshot.docs.map((d) =>
-            providerToCardData({ ...(d.data() as Omit<Provider, 'uid'>), uid: d.id })
+          if (snapshot.empty) {
+            console.log('[useWorkers] Firestore providers collection is currently empty. Showing fallback.');
+            setWorkers(MOCK_WORKERS.slice(0, maxResults));
+            setLoading(false);
+            return;
+          }
+
+          let docs = snapshot.docs.map((d) =>
+            providerToCardData({ ...d.data(), uid: d.id }, userLocation)
           );
-          setWorkers(docs);
+
+          if (category) {
+            docs = docs.filter((w) =>
+              w.categories.some((c) => c.toLowerCase().includes(category.toLowerCase())) ||
+              w.subtitle.toLowerCase().includes(category.toLowerCase())
+            );
+          }
+
+          if (onlineOnly) {
+            docs = docs.filter((w) => w.isOnline);
+          }
+
+          // Sort in memory by rating descending
+          docs.sort((a, b) => b.rating - a.rating);
+
+          setWorkers(docs.slice(0, maxResults));
           setLoading(false);
         },
         (err) => {
           console.error('[useWorkers] Firestore error:', err);
           setError(err.message);
-          // Fall back to mock data on permission errors (e.g. no auth yet)
           setWorkers(MOCK_WORKERS.slice(0, maxResults));
           setLoading(false);
         }
@@ -196,7 +231,7 @@ export function useWorkers(options: UseWorkersOptions = {}) {
       setWorkers(MOCK_WORKERS.slice(0, maxResults));
       setLoading(false);
     }
-  }, [category, maxResults, onlineOnly]);
+  }, [category, maxResults, onlineOnly, uLat, uLng]);
 
   return { workers, loading, error };
 }

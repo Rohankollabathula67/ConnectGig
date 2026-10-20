@@ -30,3 +30,10 @@ export {
   verifyPaymentSignature
 } from './payments';
 
+// Export Users & Seeder HTTP API
+export {
+  getUsersList,
+  seedRealProviders
+} from './api';
+
+
