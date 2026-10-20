@@ -8,10 +8,19 @@ export interface ProviderLocation {
   geohash: string;
 }
 
+export interface ProviderVerificationDocs {
+  aadhaarUrl?: string;
+  panUrl?: string;
+  certUrl?: string;
+  submittedAt?: any;
+  verifiedAt?: any;
+}
+
 export interface Provider {
   uid: string;
   categories: string[];
   verificationStatus: VerificationStatus;
+  verificationDocs?: ProviderVerificationDocs;
   currentLocation: ProviderLocation;
   isOnline: boolean;
   isAvailable: boolean;

@@ -13,6 +13,8 @@ interface NotificationState {
   activeListener: (() => void) | null;
   subscribeToNotifications: (userId: string) => void;
   unsubscribeFromNotifications: () => void;
+  markAllAsRead: () => void;
+  markAsRead: (id: string) => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
@@ -44,5 +46,18 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       listener();
       set({ activeListener: null, notifications: [], unreadCount: 0 });
     }
+  },
+
+  markAllAsRead: () => {
+    const updated = get().notifications.map((n) => ({ ...n, isRead: true }));
+    set({ notifications: updated, unreadCount: 0 });
+  },
+
+  markAsRead: (id: string) => {
+    const updated = get().notifications.map((n) =>
+      n.id === id ? { ...n, isRead: true } : n
+    );
+    const unread = updated.filter((n) => !n.isRead).length;
+    set({ notifications: updated, unreadCount: unread });
   },
 }));
