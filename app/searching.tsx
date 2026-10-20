@@ -20,7 +20,8 @@ export default function SearchingScreen() {
     activeRequest, 
     subscribeToActiveRequest, 
     unsubscribeFromActiveRequest, 
-    cancelRequest 
+    cancelRequest,
+    acceptRequest,
   } = useRequestStore();
 
   const clientId = user?.uid || 'mock-client-uid';
@@ -30,19 +31,29 @@ export default function SearchingScreen() {
     subscribeToActiveRequest(clientId, 'client');
 
     // Simulate radius expansion
-    const timer = setTimeout(() => setRadius(6), 5000);
+    const radiusTimer = setTimeout(() => setRadius(6), 4000);
+
+    // Auto-match simulation fallback: if still searching after 6s, assign Marcus Rivera
+    const matchTimer = setTimeout(() => {
+      const currentReq = useRequestStore.getState().activeRequest;
+      if (currentReq && currentReq.status === 'searching') {
+        acceptRequest(currentReq.requestId, 'mock-w1', 'Marcus Rivera', 4.9);
+      }
+    }, 6000);
+
     return () => {
-      clearTimeout(timer);
+      clearTimeout(radiusTimer);
+      clearTimeout(matchTimer);
       unsubscribeFromActiveRequest();
     };
-  }, []);
+  }, [clientId]);
 
   useEffect(() => {
     // When a worker accepts the job, navigate to live tracking screen
     if (activeRequest?.status === 'accepted') {
       router.replace('/job-tracking');
     }
-  }, [activeRequest]);
+  }, [activeRequest?.status]);
 
 
   return (

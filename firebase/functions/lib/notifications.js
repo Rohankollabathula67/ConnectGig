@@ -95,6 +95,20 @@ exports.onServiceRequestUpdated = (0, firestore_1.onDocumentUpdated)('serviceReq
             }
         }
         else if (newData.status === 'completed') {
+            // Job Completed -> Update provider earnings & stats
+            if (providerId) {
+                const payout = Number(newData.estimatedCost) || 0;
+                try {
+                    await db.collection('providers').doc(providerId).set({
+                        totalJobsCompleted: admin.firestore.FieldValue.increment(1),
+                        totalEarnings: admin.firestore.FieldValue.increment(payout),
+                        lastCompletedJobAt: admin.firestore.FieldValue.serverTimestamp(),
+                    }, { merge: true });
+                }
+                catch (statErr) {
+                    console.error(`[Notifications] Failed to update stats for provider ${providerId}:`, statErr);
+                }
+            }
             // Job Completed -> Notify Client
             const token = await getClientToken(clientId);
             if (token) {
@@ -102,7 +116,7 @@ exports.onServiceRequestUpdated = (0, firestore_1.onDocumentUpdated)('serviceReq
                     token,
                     notification: {
                         title: 'Service Completed! ✅',
-                        body: `Your ${category} service has been marked completed. Please complete payment.`,
+                        body: `Your ${category} service has been marked completed. Thank you!`,
                     },
                     data: { requestId, status: 'completed' },
                 });

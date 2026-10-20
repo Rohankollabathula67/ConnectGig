@@ -4,14 +4,14 @@
  * worker position, and the routing polyline connecting them.
  */
 
-import React, { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View, Alert, Image, Linking } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Pressable, StyleSheet, Text, View, Alert, Image, Linking, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { safeGoBack } from '../utils/navigation';
-import { ChevronLeft, Phone, MessageCircle, Languages, HelpCircle, Clock } from 'lucide-react-native';
+import { ChevronLeft, Phone, MessageCircle, Languages, HelpCircle, Clock, CreditCard } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
-import { Spacing, Radii } from '../constants/spacing';
+import { Spacing, Radii, Shadows } from '../constants/spacing';
 import { Typography } from '../constants/typography';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
@@ -21,6 +21,8 @@ import { useLocation } from '../hooks/useLocation';
 import { useAuthStore } from '../store/authStore';
 import { useRequestStore } from '../store/requestStore';
 import { useLocationStore } from '../store/locationStore';
+import { paymentsService } from '../services/payments';
+import { formatCurrency } from '../utils/currency';
 
 export default function JobTrackingScreen() {
   const { location } = useLocation();
@@ -72,33 +74,51 @@ export default function JobTrackingScreen() {
     }
   }, [activeRequest?.status, location]);
 
-  const handleSimulateComplete = () => {
-    if (activeRequest) {
-      Alert.alert(
-        "Job Completion",
-        "Would you like to simulate completing this service request?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Complete Job", 
-            onPress: async () => {
-              await completeRequest(activeRequest.requestId);
-              router.replace({
-                pathname: '/rating',
-                params: {
-                  requestId: activeRequest.requestId,
-                  targetUserId: activeRequest.acceptedProviderId || 'mock-worker-uid',
-                  targetName: providerName,
-                  role: 'client'
-                }
-              });
-            } 
-          }
-        ]
-      );
-    }
-  };
+  const [paying, setPaying] = useState(false);
 
+  const handlePayAndComplete = () => {
+    if (!activeRequest) return;
+    const amount = activeRequest.estimatedCost || 450;
+
+    Alert.alert(
+      "Complete & Pay",
+      `Total amount due: ${formatCurrency(amount)}\nProceed with secure payment to ${providerName}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: `Pay ${formatCurrency(amount)}`,
+          onPress: async () => {
+            setPaying(true);
+            try {
+              const result = await paymentsService.processPayment({
+                requestId: activeRequest.requestId,
+                amount,
+                clientName: user?.displayName || 'Client',
+                clientPhone: user?.phoneNumber || '+91 9876543210',
+              });
+
+              if (result.success) {
+                await completeRequest(activeRequest.requestId);
+                router.replace({
+                  pathname: '/rating',
+                  params: {
+                    requestId: activeRequest.requestId,
+                    targetUserId: activeRequest.acceptedProviderId || 'mock-worker-uid',
+                    targetName: providerName,
+                    role: 'client',
+                  },
+                });
+              }
+            } catch (err: any) {
+              Alert.alert('Payment Error', err?.message || 'Payment could not be processed.');
+            } finally {
+              setPaying(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -117,12 +137,18 @@ export default function JobTrackingScreen() {
         </View>
 
         {/* ETA Banner */}
-        <Pressable onPress={handleSimulateComplete} style={styles.etaBanner}>
-          <Clock size={14} color={Colors.textWhite} strokeWidth={2} />
+        <Pressable onPress={handlePayAndComplete} style={[styles.etaBanner, paying && styles.btnDisabled]}>
+          {paying ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Clock size={14} color={Colors.textWhite} strokeWidth={2} />
+          )}
           <Text style={styles.etaText}>
-            {activeRequest?.status === 'accepted' 
-              ? `Arriving in ${estimatedArrivalMins} mins (Tap to Complete)`
-              : 'Tap to Complete Job'}
+            {paying
+              ? 'Processing Payment…'
+              : activeRequest?.status === 'accepted' 
+              ? `Arriving in ${estimatedArrivalMins} mins · Tap to Pay & Complete`
+              : 'Tap to Complete & Pay'}
           </Text>
         </Pressable>
       </SafeAreaView>
@@ -189,6 +215,22 @@ export default function JobTrackingScreen() {
             </Pressable>
           </View>
 
+          {/* Pay & Complete Action Button */}
+          <Pressable
+            style={[styles.payCompleteBtn, paying && styles.btnDisabled]}
+            disabled={paying}
+            onPress={handlePayAndComplete}
+          >
+            {paying ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <CreditCard size={18} color="#fff" strokeWidth={2} />
+            )}
+            <Text style={styles.payCompleteText}>
+              {paying ? 'Processing Payment…' : `Pay & Complete (${formatCurrency(activeRequest?.estimatedCost || 450)})`}
+            </Text>
+          </Pressable>
+
           {/* AI Translation */}
           <View style={styles.translationRow}>
             <Languages size={16} color={Colors.primary} strokeWidth={2} />
@@ -245,4 +287,23 @@ const styles = StyleSheet.create({
   actionText: { ...Typography.body2SemiBold, color: Colors.primary },
   translationRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, backgroundColor: Colors.primaryBg10, borderRadius: Radii.button },
   translationText: { ...Typography.overline, color: Colors.primary, letterSpacing: 1 },
+  payCompleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: Radii.button,
+    marginBottom: Spacing.md,
+    ...Shadows.button,
+  },
+  payCompleteText: {
+    ...Typography.body2SemiBold,
+    color: Colors.textWhite,
+    fontWeight: '700',
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
 });

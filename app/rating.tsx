@@ -15,8 +15,12 @@ import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { firestoreService } from '../services/firestore';
+import { db, IS_FIREBASE_ENABLED } from '../services/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuthStore } from '../store/authStore';
 
 export default function RatingScreen() {
+  const { user } = useAuthStore();
   const { requestId, targetUserId, targetName, role } = useLocalSearchParams<{
     requestId: string;
     targetUserId: string;
@@ -31,7 +35,19 @@ export default function RatingScreen() {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      // Mock ratings save logic
+      if (IS_FIREBASE_ENABLED) {
+        await addDoc(collection(db, 'ratings'), {
+          requestId: requestId || null,
+          providerId: targetUserId || 'mock-worker-uid',
+          clientId: user?.uid || 'mock-client-uid',
+          score: rating,
+          comment: comment.trim(),
+          role: role || 'client',
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      // In-app notification for instant feedback
       await firestoreService.addMockNotification({
         userId: targetUserId || 'mock-worker-uid',
         type: 'feature_announcement',
