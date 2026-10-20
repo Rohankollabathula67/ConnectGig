@@ -64,7 +64,7 @@ const firebaseConfig = {
 console.log('🌱 ConnectGig Firestore Seeder');
 console.log('   Target Project ID:', useAdmin ? 'Service Account Target' : (firebaseConfig.projectId || 'None'));
 
-const isMock = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('mock') || firebaseConfig.projectId === 'connect-gig';
+const isMock = !firebaseConfig.apiKey || firebaseConfig.apiKey.includes('mock') || !firebaseConfig.apiKey.startsWith('AIza');
 if (isMock && !useAdmin) {
   console.log('\n⚠️  ATTENTION:');
   console.log('   Your .env is still set to placeholder values:');

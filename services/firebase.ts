@@ -46,7 +46,6 @@ const isPlaceholder =
   apiKey.toLowerCase().includes('mock') ||
   apiKey.toLowerCase().includes('replace') ||
   apiKey.toLowerCase().includes('placeholder') ||
-  process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID === 'connect-gig' ||
   !apiKey.startsWith('AIza');
 
 export const IS_FIREBASE_ENABLED = missing.length === 0 && !isPlaceholder;
