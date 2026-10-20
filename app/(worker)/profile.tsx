@@ -17,8 +17,8 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
 import { useAuthStore } from '../../store/authStore';
-import { db, storage, IS_FIREBASE_ENABLED } from '../../services/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, IS_FIREBASE_ENABLED } from '../../services/firebase';
+import { storageService } from '../../services/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 
 const MENU_ITEMS = [
@@ -92,14 +92,8 @@ export default function WorkerProfileScreen() {
     const userId = user?.uid || 'mock-worker-uid';
     setUploadingImage(true);
     try {
-      let finalUrl = localUri;
+      const finalUrl = await storageService.uploadProfilePhoto(userId, localUri);
       if (IS_FIREBASE_ENABLED) {
-        const response = await fetch(localUri);
-        const blob = await response.blob();
-        const storageRef = ref(storage, `profile-photos/${userId}.jpg`);
-        await uploadBytes(storageRef, blob);
-        finalUrl = await getDownloadURL(storageRef);
-        
         // Update database
         const userDocRef = doc(db, 'providers', userId);
         await updateDoc(userDocRef, { profilePhotoUrl: finalUrl });

@@ -7,6 +7,7 @@ import React from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  StyleProp,
   StyleSheet,
   Text,
   TextStyle,
@@ -19,8 +20,9 @@ import { Typography } from '../../constants/typography';
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
-interface ButtonProps {
-  title: string;
+export interface ButtonProps {
+  title?: string;
+  children?: React.ReactNode;
   onPress?: () => void;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -28,12 +30,13 @@ interface ButtonProps {
   loading?: boolean;
   icon?: React.ReactNode;
   fullWidth?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 export function Button({
   title,
+  children,
   onPress,
   variant = 'primary',
   size = 'md',
@@ -66,19 +69,23 @@ export function Button({
           size="small"
           color={variant === 'primary' || variant === 'danger' ? Colors.textWhite : Colors.primary}
         />
+      ) : children ? (
+        children
       ) : (
         <>
           {icon}
-          <Text
-            style={[
-              size === 'sm' ? Typography.buttonSmall : Typography.button,
-              variantTextStyles[variant],
-              isDisabled && styles.disabledText,
-              textStyle,
-            ]}
-          >
-            {title}
-          </Text>
+          {title ? (
+            <Text
+              style={[
+                size === 'sm' ? Typography.buttonSmall : Typography.button,
+                variantTextStyles[variant],
+                isDisabled && styles.disabledText,
+                textStyle,
+              ]}
+            >
+              {title}
+            </Text>
+          ) : null}
         </>
       )}
     </Pressable>

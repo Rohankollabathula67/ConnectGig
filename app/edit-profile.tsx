@@ -17,8 +17,8 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 import { useAuthStore } from '../store/authStore';
-import { db, storage, IS_FIREBASE_ENABLED } from '../services/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, IS_FIREBASE_ENABLED } from '../services/firebase';
+import { storageService } from '../services/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 
 export default function EditProfileScreen() {
@@ -86,14 +86,8 @@ export default function EditProfileScreen() {
     const userId = user?.uid || 'mock-client-uid';
     setUploadingImage(true);
     try {
-      let finalUrl = localUri;
+      const finalUrl = await storageService.uploadProfilePhoto(userId, localUri);
       if (IS_FIREBASE_ENABLED) {
-        const response = await fetch(localUri);
-        const blob = await response.blob();
-        const storageRef = ref(storage, `profile-photos/${userId}.jpg`);
-        await uploadBytes(storageRef, blob);
-        finalUrl = await getDownloadURL(storageRef);
-        
         // Write to DB
         const role = user?.role === 'provider' ? 'providers' : 'users';
         const userDocRef = doc(db, role, userId);

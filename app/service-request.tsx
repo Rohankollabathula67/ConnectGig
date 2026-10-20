@@ -10,8 +10,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { safeGoBack } from '../utils/navigation';
 import { ChevronLeft, Check, Edit3, Info, Camera } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { storage, IS_FIREBASE_ENABLED } from '../services/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storageService } from '../services/storage';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii, Shadows } from '../constants/spacing';
 import { Typography } from '../constants/typography';
@@ -116,16 +115,8 @@ export default function ServiceRequestScreen() {
     let uploadedPhotoUrl = null;
     try {
       if (problemImage) {
-        const tempRequestId = `req_photo_${Date.now()}`;
-        if (IS_FIREBASE_ENABLED) {
-          const response = await fetch(problemImage);
-          const blob = await response.blob();
-          const storageRef = ref(storage, `request-photos/${tempRequestId}.jpg`);
-          await uploadBytes(storageRef, blob);
-          uploadedPhotoUrl = await getDownloadURL(storageRef);
-        } else {
-          uploadedPhotoUrl = problemImage; // Mock URL is local URI
-        }
+        const tempRequestId = `req_${Date.now()}`;
+        uploadedPhotoUrl = await storageService.uploadRequestPhoto(tempRequestId, problemImage);
       }
 
       await createRequest(

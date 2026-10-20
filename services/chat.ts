@@ -4,7 +4,8 @@
  * conversation feeds with unread counters, and fallback simulated offline mode.
  */
 
-import { db, storage, IS_FIREBASE_ENABLED } from './firebase';
+import { db, IS_FIREBASE_ENABLED } from './firebase';
+import { storageService } from './storage';
 import {
   collection,
   doc,
@@ -18,7 +19,6 @@ import {
   serverTimestamp,
   increment,
 } from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import type { ChatMessage, Conversation } from '../types/chat';
 
 export interface SendMessageParams {
@@ -387,30 +387,6 @@ export const chatService = {
    * Upload an image attachment to Firebase Storage
    */
   async uploadChatImage(conversationId: string, localUri: string): Promise<string> {
-    if (!IS_FIREBASE_ENABLED) {
-      // Return local URI for immediate preview in offline / mock mode
-      return localUri;
-    }
-
-    const response = await fetch(localUri);
-    const blob = await response.blob();
-    const filename = `chat_${Date.now()}_${Math.floor(Math.random() * 10000)}.jpg`;
-    const storageRef = ref(storage, `chats/${conversationId}/${filename}`);
-
-    const uploadTask = uploadBytesResumable(storageRef, blob, {
-      contentType: 'image/jpeg',
-    });
-
-    return new Promise((resolve, reject) => {
-      uploadTask.on(
-        'state_changed',
-        null,
-        (err) => reject(err),
-        async () => {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadUrl);
-        }
-      );
-    });
+    return storageService.uploadChatImage(conversationId, localUri);
   },
 };

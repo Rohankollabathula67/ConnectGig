@@ -7,7 +7,7 @@
 import { router } from 'expo-router';
 import { Bell, Info } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GigCard } from '../../components/GigCard';
 import CustomMapView from '../../components/MapView';
@@ -21,6 +21,7 @@ import { Colors } from '../../constants/colors';
 import { Radii, Shadows, Spacing } from '../../constants/spacing';
 import { Typography } from '../../constants/typography';
 import { useLocation } from '../../hooks/useLocation';
+import { useWorkers } from '../../hooks/useWorkers';
 import { useAuthStore } from '../../store/authStore';
 import { useRequestStore } from '../../store/requestStore';
 
@@ -75,6 +76,9 @@ export default function ClientHomeScreen() {
   const { user } = useAuthStore();
   const { activeRequest, subscribeToActiveRequest, unsubscribeFromActiveRequest } = useRequestStore();
 
+  // Live Firestore provider query — auto-falls back to mock data in Demo Mode
+  const { workers, loading: workersLoading } = useWorkers({ maxResults: 6 });
+
   const clientId = user?.uid || 'mock-client-uid';
 
   useEffect(() => {
@@ -102,19 +106,24 @@ export default function ClientHomeScreen() {
     cat.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredProviders = MOCK_WORKERS.filter((worker) =>
+  // Filter live workers list by search query
+  const filteredProviders = workers.filter((worker) =>
     worker.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     worker.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const hasSearchQuery = searchQuery.trim().length > 0;
 
+  // Build map markers from live worker locations (offset slightly for demo)
   const nearbyMarkers = location
-    ? [
-      { id: '1', latitude: location.latitude + 0.003, longitude: location.longitude + 0.002, title: 'Marcus Rivera', initials: 'MR', online: true },
-      { id: '2', latitude: location.latitude - 0.004, longitude: location.longitude - 0.003, title: 'Sarah Jenkins', initials: 'SJ', online: true },
-      { id: '3', latitude: location.latitude + 0.001, longitude: location.longitude - 0.005, title: 'David Chen', initials: 'DC', online: false },
-    ]
+    ? workers.filter((w) => w.isOnline).map((w, i) => ({
+        id: w.uid,
+        latitude: location.latitude + (i % 2 === 0 ? 0.003 : -0.004) * (i + 1) * 0.5,
+        longitude: location.longitude + (i % 2 === 0 ? 0.002 : -0.003) * (i + 1) * 0.5,
+        title: w.name,
+        initials: w.name.split(' ').map((n) => n[0]).join('').slice(0, 2),
+        online: w.isOnline,
+      }))
     : [];
 
 
@@ -265,22 +274,41 @@ export default function ClientHomeScreen() {
                   <Text style={styles.sectionTitle}>AI Recommended</Text>
                   <Info size={16} color={Colors.textMuted} strokeWidth={2} />
                 </View>
+                <Badge
+                  type="online"
+                  label={workersLoading ? 'Loading…' : `${workers.filter((w) => w.isOnline).length} Online`}
+                />
               </View>
 
-              <View style={styles.workersList}>
-                {MOCK_WORKERS.map((worker, index) => (
-                  <WorkerCard
-                    key={index}
-                    {...worker}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/service-request',
-                        params: { category: worker.subtitle.replace('Expert ', '').replace('Master ', '').replace('Professional ', '') },
-                      })
-                    }
-                  />
-                ))}
-              </View>
+              {workersLoading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color={Colors.primary} />
+                  <Text style={styles.loadingText}>Finding nearby providers…</Text>
+                </View>
+              ) : (
+                <View style={styles.workersList}>
+                  {workers.map((worker) => (
+                    <WorkerCard
+                      key={worker.uid}
+                      name={worker.name}
+                      subtitle={worker.subtitle}
+                      photoUrl={worker.photoUrl}
+                      rating={worker.rating}
+                      distance={worker.distance}
+                      hourlyRate={worker.hourlyRate}
+                      isVerified={worker.isVerified}
+                      isTopPro={worker.isTopPro}
+                      isOnline={worker.isOnline}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/service-request',
+                          params: { category: worker.categories[0] ?? worker.subtitle },
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+              )}
             </View>
           </>
         )}
@@ -430,6 +458,17 @@ const styles = StyleSheet.create({
   // Workers List
   workersList: {
     gap: Spacing.md,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    gap: Spacing.md,
+  },
+  loadingText: {
+    ...Typography.body2,
+    color: Colors.textMuted,
   },
   floatingActiveBanner: {
     position: 'absolute',
