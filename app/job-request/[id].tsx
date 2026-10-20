@@ -16,6 +16,7 @@ import { Avatar } from '../../components/ui/Avatar';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { SwipeSlider } from '../../components/ui/SwipeSlider';
+import CustomMapView from '../../components/MapView';
 import { useAuthStore } from '../../store/authStore';
 import { useRequestStore } from '../../store/requestStore';
 import { formatCurrency } from '../../utils/currency';
@@ -123,9 +124,18 @@ export default function JobRequestScreen() {
 
       {/* Mini Map */}
       <View style={styles.mapPreview}>
-        <View style={styles.mapPlaceholder}>
-          <MapPin size={24} color={Colors.primary} strokeWidth={2} />
-        </View>
+        <CustomMapView
+          interactive={false}
+          markers={[
+            {
+              id: 'job-loc',
+              latitude: activeRequest?.clientLocation?.lat || 37.78825,
+              longitude: activeRequest?.clientLocation?.lng || -122.4324,
+              title: activeRequest?.category || 'Service Location',
+            },
+          ]}
+          style={StyleSheet.absoluteFill}
+        />
       </View>
 
       {/* Swipe to Accept component */}

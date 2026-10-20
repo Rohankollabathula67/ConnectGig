@@ -8,7 +8,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 're
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { safeGoBack } from '../utils/navigation';
-import { ChevronLeft, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, Trash2, Shield, FileText, ChevronRight } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii } from '../constants/spacing';
 import { Typography } from '../constants/typography';
@@ -123,6 +123,42 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
+        {/* Legal & Compliance */}
+        <Text style={styles.sectionHeader}>Legal & Compliance</Text>
+        <Card variant="elevated" style={styles.card} padding="lg">
+          <Pressable
+            style={styles.menuRow}
+            onPress={() => router.push('/privacy')}
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.menuIconBox}>
+                <Shield size={18} color={Colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.settingLabel}>Privacy Policy</Text>
+                <Text style={styles.settingDesc}>How we handle your personal data & permissions</Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color={Colors.textMuted} />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.menuRow}
+            onPress={() => router.push('/terms')}
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.menuIconBox}>
+                <FileText size={18} color={Colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.settingLabel}>Terms of Service</Text>
+                <Text style={styles.settingDesc}>Platform rules, escrow, contractor terms & safety</Text>
+              </View>
+            </View>
+            <ChevronRight size={18} color={Colors.textMuted} />
+          </Pressable>
+        </Card>
+
         {/* Account & Data Management (Apple Guideline 5.1.1) */}
         <Text style={[styles.sectionHeader, { color: Colors.error }]}>Account Actions</Text>
         <Card variant="elevated" style={styles.card} padding="lg">
@@ -186,4 +222,24 @@ const styles = StyleSheet.create({
   },
   deleteLabel: { ...Typography.body2SemiBold, color: Colors.error },
   deleteDesc: { ...Typography.caption, color: Colors.textMuted, marginTop: 2, maxWidth: '90%' },
+  menuRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs,
+  },
+  menuLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    flex: 1,
+  },
+  menuIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.primaryBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

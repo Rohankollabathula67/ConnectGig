@@ -8,7 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { safeGoBack } from '../utils/navigation';
-import { ChevronLeft, Mail, PhoneCall } from 'lucide-react-native';
+import { ChevronLeft, Mail, PhoneCall, ShieldCheck, FileText, ChevronRight } from 'lucide-react-native';
 import { Colors } from '../constants/colors';
 import { Spacing, Radii } from '../constants/spacing';
 import { Typography } from '../constants/typography';
@@ -57,6 +57,32 @@ export default function HelpSupportScreen() {
             <Text style={styles.contactText}>1800-420-9999 (Toll-Free)</Text>
           </View>
         </Card>
+
+        {/* Legal Policies */}
+        <Text style={[styles.sectionTitle, { marginTop: Spacing.xl }]}>Legal & Compliance</Text>
+        <Card variant="elevated" style={styles.contactCard} padding="lg">
+          <Pressable
+            style={styles.policyRow}
+            onPress={() => router.push('/terms')}
+          >
+            <View style={styles.policyLeft}>
+              <FileText size={18} color={Colors.primary} strokeWidth={2} />
+              <Text style={styles.policyText}>Terms of Service</Text>
+            </View>
+            <ChevronRight size={18} color={Colors.textMuted} />
+          </Pressable>
+          <View style={styles.divider} />
+          <Pressable
+            style={styles.policyRow}
+            onPress={() => router.push('/privacy')}
+          >
+            <View style={styles.policyLeft}>
+              <ShieldCheck size={18} color={Colors.primary} strokeWidth={2} />
+              <Text style={styles.policyText}>Privacy Policy</Text>
+            </View>
+            <ChevronRight size={18} color={Colors.textMuted} />
+          </Pressable>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );
@@ -86,4 +112,19 @@ const styles = StyleSheet.create({
   contactRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: Spacing.xs },
   contactText: { ...Typography.body2, color: Colors.textSecondary },
   divider: { height: 1, backgroundColor: Colors.divider },
+  policyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.xs,
+  },
+  policyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  policyText: {
+    ...Typography.body2SemiBold,
+    color: Colors.textPrimary,
+  },
 });

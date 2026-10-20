@@ -22,6 +22,7 @@ import { useAuthStore } from '../store/authStore';
 import { useRequestStore } from '../store/requestStore';
 import { useLocationStore } from '../store/locationStore';
 import { paymentsService } from '../services/payments';
+import { analyticsService } from '../services/analytics';
 import { formatCurrency } from '../utils/currency';
 
 export default function JobTrackingScreen() {
@@ -98,6 +99,7 @@ export default function JobTrackingScreen() {
               });
 
               if (result.success) {
+                analyticsService.logPaymentSuccess(activeRequest.requestId, amount);
                 await completeRequest(activeRequest.requestId);
                 router.replace({
                   pathname: '/rating',

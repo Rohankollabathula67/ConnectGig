@@ -97,6 +97,10 @@ export default function RootLayout() {
           options={{ animation: 'slide_from_right' }}
         />
         <Stack.Screen
+          name="terms"
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen
           name="help-support"
           options={{ animation: 'slide_from_right' }}
         />

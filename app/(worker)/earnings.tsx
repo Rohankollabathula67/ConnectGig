@@ -41,6 +41,7 @@ import { Button } from '../../components/ui/Button';
 import { formatCurrency } from '../../utils/currency';
 import { useAuthStore } from '../../store/authStore';
 import { db, IS_FIREBASE_ENABLED } from '../../services/firebase';
+import { analyticsService } from '../../services/analytics';
 import { doc, onSnapshot } from 'firebase/firestore';
 
 interface CompletedJobItem {
@@ -137,6 +138,7 @@ export default function EarningsScreen() {
       setProcessingPayout(false);
       setBalance((prev) => Math.max(0, prev - amt));
       setWithdrawModalVisible(false);
+      analyticsService.logPayoutRequested(amt, withdrawMethod);
 
       const destination =
         withdrawMethod === 'upi' ? `UPI (${upiId})` : `Bank A/C (**${accountNumber.slice(-4)})`;

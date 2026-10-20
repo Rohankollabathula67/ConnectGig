@@ -276,7 +276,14 @@ export default function RegisterScreen() {
             size="lg"
           />
           <Text style={styles.disclaimer}>
-            By registering, you confirm that the information provided is accurate.
+            By registering, you confirm your information is accurate and agree to ConnectGiG&apos;s{' '}
+            <Text style={styles.disclaimerLink} onPress={() => router.push('/terms')}>
+              Terms of Service
+            </Text>
+            {' '}&{' '}
+            <Text style={styles.disclaimerLink} onPress={() => router.push('/privacy')}>
+              Privacy Policy
+            </Text>.
           </Text>
         </View>
       </ScrollView>
@@ -387,5 +394,9 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  disclaimerLink: {
+    color: Colors.primary,
+    fontWeight: '600',
   },
 });

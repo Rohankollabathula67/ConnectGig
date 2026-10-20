@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ChevronRight, HelpCircle, LogOut, Settings, Shield, Star, Camera } from 'lucide-react-native';
+import { ChevronRight, HelpCircle, LogOut, Settings, Shield, Star, Camera, FileText } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Avatar } from '../../components/ui/Avatar';
 import { Card } from '../../components/ui/Card';
@@ -24,6 +24,7 @@ const MENU_ITEMS = [
   { icon: Settings, label: 'Account Settings', route: '/settings' },
   { icon: Star, label: 'My Reviews', route: '/my-reviews' },
   { icon: Shield, label: 'Privacy & Security', route: '/privacy' },
+  { icon: FileText, label: 'Terms of Service', route: '/terms' },
   { icon: HelpCircle, label: 'Help & Support', route: '/help-support' },
 ];
 

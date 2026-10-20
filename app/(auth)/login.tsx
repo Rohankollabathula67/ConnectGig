@@ -261,9 +261,13 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             By continuing, you agree to ConnectGiG&apos;s{' '}
-            <Text style={styles.footerLink}>Terms of Service</Text>
+            <Text style={styles.footerLink} onPress={() => router.push('/terms')}>
+              Terms of Service
+            </Text>
             {' '}and{' '}
-            <Text style={styles.footerLink}>Privacy Policy</Text>
+            <Text style={styles.footerLink} onPress={() => router.push('/privacy')}>
+              Privacy Policy
+            </Text>
           </Text>
         </View>
       </ScrollView>

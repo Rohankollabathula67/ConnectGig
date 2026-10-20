@@ -18,6 +18,7 @@ import { firestoreService } from '../services/firestore';
 import { db, IS_FIREBASE_ENABLED } from '../services/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthStore } from '../store/authStore';
+import { analyticsService } from '../services/analytics';
 
 export default function RatingScreen() {
   const { user } = useAuthStore();
@@ -54,6 +55,9 @@ export default function RatingScreen() {
         title: 'New Rating Received!',
         body: `You received a ${rating}-star review: "${comment || 'No comment'}"`,
       });
+
+      // Track telemetry
+      analyticsService.logRatingSubmitted(rating);
 
       Alert.alert(
         "Feedback Submitted",
